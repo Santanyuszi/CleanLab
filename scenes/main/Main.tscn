@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://main001"]
+
+[ext_resource type="PackedScene" uid="uid://labroom001" path="res://scenes/laboratory/LaboratoryRoom.tscn" id="1_lab"]
+
+[node name="Main" type="Node"]
+
+[node name="LaboratoryRoom" parent="." instance=ExtResource("1_lab")]

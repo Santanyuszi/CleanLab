@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://drying001"]
+
+[ext_resource type="PackedScene" uid="uid://stationbase001" path="res://scenes/stations/StationBase.tscn" id="1_base"]
+
+[node name="DryingStation" instance=ExtResource("1_base")]
+station_name = "Drying"
+station_type = "drying"
+processing_time = 2.5
+required_sample_state = 2
+output_sample_state = 4

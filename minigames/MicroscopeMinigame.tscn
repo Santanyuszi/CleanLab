@@ -1,0 +1,98 @@
+[gd_scene load_steps=2 format=3 uid="uid://minigame001"]
+
+[ext_resource type="Script" path="res://scripts/minigames/MicroscopeMinigame.gd" id="1_mini"]
+
+[node name="MicroscopeMinigame" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_mini")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.02, 0.04, 0.08, 0.88)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(480, 420)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Microscope – Particle Classification"
+horizontal_alignment = 1
+
+[node name="ParticleView" type="ColorRect" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+color = Color(0.75, 0.8, 0.9, 1)
+
+[node name="PromptLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Classify the particle!"
+horizontal_alignment = 1
+
+[node name="TimerLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Time: 15.0s"
+
+[node name="ScoreLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Score: 0"
+
+[node name="ComboLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Combo: x1.00"
+
+[node name="Buttons" type="GridContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="MetallicBtn" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Metallic"
+
+[node name="FiberBtn" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Fiber"
+
+[node name="NonMetallicBtn" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Non-metallic"
+
+[node name="IgnoreBtn" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Ignore"
+
+[connection signal="pressed" from="Center/Panel/Margin/VBox/Buttons/MetallicBtn" to="." method="_on_answer_pressed" binds= [0]]
+[connection signal="pressed" from="Center/Panel/Margin/VBox/Buttons/FiberBtn" to="." method="_on_answer_pressed" binds= [1]]
+[connection signal="pressed" from="Center/Panel/Margin/VBox/Buttons/NonMetallicBtn" to="." method="_on_answer_pressed" binds= [2]]
+[connection signal="pressed" from="Center/Panel/Margin/VBox/Buttons/IgnoreBtn" to="." method="_on_answer_pressed" binds= [3]]

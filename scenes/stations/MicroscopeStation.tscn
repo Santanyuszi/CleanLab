@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://microscope001"]
+
+[ext_resource type="PackedScene" uid="uid://stationbase001" path="res://scenes/stations/StationBase.tscn" id="1_base"]
+[ext_resource type="Script" path="res://scripts/stations/MicroscopeStation.gd" id="2_micro"]
+
+[node name="MicroscopeStation" groups=["microscope_station"] instance=ExtResource("1_base")]
+position = Vector2(640, 0)
+script = ExtResource("2_micro")
+station_name = "Microscope"
+station_type = "microscope"
+processing_time = 1.0
+required_sample_state = 4
+output_sample_state = 5

@@ -1,0 +1,9 @@
+# Godot 4
+.godot/
+*.translation
+export.cfg
+export_credentials.cfg
+*.import
+
+# OS
+.DS_Store
