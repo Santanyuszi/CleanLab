@@ -1,31 +1,20 @@
 extends Node2D
-## Single-room prototype: spawns one sample and wires stations + worker.
+## Kitchen-style lab floor — multiple tables, drag parts, truck payout.
 
-@export var sample_scene: PackedScene
-@export var spawn_delay: float = 0.5
+@export var part_scene: PackedScene
 
-@onready var _spawn_point: Marker2D = $SpawnPoint
-@onready var _worker: Worker = $Worker
-@onready var _washing: StationBase = $Stations/WashingStation
-@onready var _drying: StationBase = $Stations/DryingStation
-@onready var _microscope: MicroscopeStation = $Stations/MicroscopeStation
-@onready var _hud: Control = $UI/GameHUD
-
-
+@onready var _incoming_pad: Marker2D = %IncomingPad
 func _ready() -> void:
-	GameManager.start_prototype_run()
-	await get_tree().create_timer(spawn_delay).timeout
-	_spawn_sample()
-	_hud.set_phase_hint("Sample arrived. Click the sample, then deliver to Washing.")
+	GameManager.start_run()
+	_spawn_next_order()
 
 
-func _spawn_sample() -> void:
-	var sample: Sample = sample_scene.instantiate()
-	sample.global_position = _spawn_point.global_position
-	add_child(sample)
-	GameManager.register_sample(sample)
-	sample.picked_up.connect(_on_sample_picked_up)
-
-
-func _on_sample_picked_up(_by: Worker) -> void:
-	_hud.set_phase_hint("Deliver sample to Washing station (click station).")
+func _spawn_next_order() -> void:
+	var part: Part = part_scene.instantiate()
+	var order: PartOrder = PartOrder.new()
+	order.order_id = "PRT-%03d" % randi_range(1, 999)
+	order.payout = randi_range(80, 160)
+	part.order = order
+	part.global_position = _incoming_pad.global_position
+	add_child(part)
+	GameManager.register_part_in_queue(part)

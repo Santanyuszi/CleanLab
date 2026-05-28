@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3 uid="uid://incomingdock001"]
+
+[ext_resource type="Script" path="res://scripts/management/IncomingDock.gd" id="1_dock"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_dock"]
+size = Vector2(120, 80)
+
+[node name="IncomingDock" type="Area2D"]
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_dock")
+
+[node name="Platform" type="ColorRect" parent="."]
+offset_left = -60.0
+offset_top = -40.0
+offset_right = 60.0
+offset_bottom = 40.0
+color = Color(0.2, 0.28, 0.38, 1)
+
+[node name="Title" type="Label" parent="."]
+offset_left = -60.0
+offset_top = -64.0
+offset_right = 60.0
+offset_bottom = -44.0
+theme_override_colors/font_color = Color(0.95, 0.7, 0.45, 1)
+theme_override_font_sizes/font_size = 16
+text = "Incoming"
+horizontal_alignment = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_dock")

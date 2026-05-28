@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://extraction001"]
+
+[ext_resource type="PackedScene" uid="uid://workstation001" path="res://scenes/stations/WorkStation.tscn" id="1_base"]
+
+[node name="ExtractionCabinet" instance=ExtResource("1_base")]
+station_kind = 0
+station_title = "Extraction"
+device_key = "extraction"
+base_process_seconds = 4.0

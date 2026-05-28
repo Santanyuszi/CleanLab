@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://microscopebench001"]
+
+[ext_resource type="PackedScene" uid="uid://workstation001" path="res://scenes/stations/WorkStation.tscn" id="1_base"]
+
+[node name="MicroscopeBench" instance=ExtResource("1_base")]
+station_kind = 2
+station_title = "Microscope"
+device_key = "microscope"
+base_process_seconds = 3.0

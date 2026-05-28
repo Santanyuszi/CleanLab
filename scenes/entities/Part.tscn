@@ -1,0 +1,38 @@
+[gd_scene load_steps=3 format=3 uid="uid://part001"]
+
+[ext_resource type="Script" path="res://scripts/entities/Part.gd" id="1_part"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_part"]
+radius = 36.0
+
+[node name="Part" type="Area2D"]
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_part")
+
+[node name="Visual" type="ColorRect" parent="."]
+offset_left = -32.0
+offset_top = -32.0
+offset_right = 32.0
+offset_bottom = 32.0
+color = Color(0.92, 0.48, 0.22, 1)
+
+[node name="ReportBadge" type="ColorRect" parent="."]
+visible = false
+offset_left = 12.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = -16.0
+color = Color(0.9, 0.95, 1, 1)
+
+[node name="Label" type="Label" parent="."]
+offset_left = -40.0
+offset_top = 36.0
+offset_right = 40.0
+offset_bottom = 56.0
+theme_override_font_sizes/font_size = 12
+text = "PRT"
+horizontal_alignment = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_part")

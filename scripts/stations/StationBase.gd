@@ -14,6 +14,7 @@ enum StationState {
 @export var processing_time: float = 3.0
 @export var required_sample_state: Sample.ProcessingState = Sample.ProcessingState.ARRIVED
 @export var output_sample_state: Sample.ProcessingState = Sample.ProcessingState.ARRIVED
+@export var tap_radius: float = 64.0
 
 var current_state: StationState = StationState.IDLE
 var _process_timer: float = 0.0
@@ -39,6 +40,10 @@ func _ready() -> void:
 	_set_visual_state(StationState.IDLE)
 
 
+func contains_world_point(world_pos: Vector2) -> bool:
+	return global_position.distance_to(world_pos) <= tap_radius
+
+
 func _process(delta: float) -> void:
 	if current_state != StationState.PROCESSING:
 		return
@@ -51,7 +56,6 @@ func _process(delta: float) -> void:
 
 func interact(worker: Worker) -> void:
 	if global_position.distance_to(worker.global_position) > worker.interaction_range:
-		worker.move_to(global_position)
 		return
 	if current_state == StationState.COMPLETE and _current_sample != null:
 		_pick_up_for_worker(worker)
@@ -69,10 +73,10 @@ func try_accept_from_worker(worker: Worker) -> bool:
 	if sample.processing_state != required_sample_state:
 		return false
 	if global_position.distance_to(worker.global_position) > worker.interaction_range:
-		worker.move_to(global_position)
 		return false
 	worker.detach_sample()
 	accept_sample(sample)
+	TouchInput.vibrate_feedback(30)
 	return true
 
 
@@ -101,6 +105,7 @@ func _finish_processing() -> void:
 	processing_completed.emit(_current_sample)
 	sample_ready_for_pickup.emit(_current_sample)
 	GameManager.notify_station_processing_complete(station_type)
+	TouchInput.vibrate_feedback(40)
 
 
 func _pick_up_for_worker(worker: Worker) -> void:
@@ -112,6 +117,7 @@ func _pick_up_for_worker(worker: Worker) -> void:
 	current_state = StationState.IDLE
 	progress_bar.value = 0.0
 	_set_visual_state(StationState.IDLE)
+	TouchInput.vibrate_feedback(25)
 
 
 func _state_for_processing() -> Sample.ProcessingState:

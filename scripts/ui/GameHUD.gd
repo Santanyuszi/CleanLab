@@ -1,46 +1,37 @@
+class_name GameHUD
 extends Control
-## Minimal dark UI overlay for prototype feedback.
 
-@onready var _phase_label: Label = $Panel/Margin/VBox/PhaseLabel
-@onready var _reputation_label: Label = $Panel/Margin/VBox/ReputationLabel
-@onready var _hint_label: Label = $Panel/Margin/VBox/HintLabel
+@onready var _money_label: Label = $TopBar/Margin/HBox/MoneyLabel
+@onready var _xp_label: Label = $TopBar/Margin/HBox/XPLabel
+@onready var _rep_label: Label = $TopBar/Margin/HBox/RepLabel
+@onready var _hint_label: Label = $HintBar/HintLabel
 
 
 func _ready() -> void:
-	GameManager.phase_changed.connect(_on_phase_changed)
-	GameManager.prototype_run_finished.connect(_on_run_finished)
-	_update_reputation()
+	GameManager.economy_changed.connect(_refresh)
+	GameManager.layer_changed.connect(_on_layer)
+	GameManager.delivery_completed.connect(_on_delivery)
+	_refresh()
+	_on_layer(GameManager.game_layer)
 
 
-func set_phase_hint(text: String) -> void:
+func set_hint(text: String) -> void:
 	_hint_label.text = text
 
 
-func _on_phase_changed(phase: GameManager.GamePhase) -> void:
-	_phase_label.text = "Phase: %s" % GameManager.GamePhase.keys()[phase]
-	_update_reputation()
-	match phase:
-		GameManager.GamePhase.SAMPLE_ARRIVED:
-			set_phase_hint("Click the sample to pick it up.")
-		GameManager.GamePhase.AT_WASHING:
-			set_phase_hint("Click Washing station to deposit. Wait, then click again to collect.")
-		GameManager.GamePhase.WASHING:
-			set_phase_hint("Washing in progress…")
-		GameManager.GamePhase.AT_DRYING:
-			set_phase_hint("Deliver washed sample to Drying station.")
-		GameManager.GamePhase.DRYING:
-			set_phase_hint("Drying in progress…")
-		GameManager.GamePhase.AT_MICROSCOPE:
-			set_phase_hint("Deliver dried sample to Microscope station.")
-		GameManager.GamePhase.MINIGAME:
-			set_phase_hint("Classify particles quickly!")
-		GameManager.GamePhase.COMPLETE:
-			set_phase_hint("Run complete. Restart scene to play again.")
+func _on_layer(layer: GameManager.GameLayer) -> void:
+	match layer:
+		GameManager.GameLayer.LAB:
+			set_hint("Drag parts between stations. Collect when timer finishes.")
+		GameManager.GameLayer.PROBLEM_INSPECTION:
+			set_hint("QC inspection open — verify the particle.")
 
 
-func _on_run_finished(score: int) -> void:
-	_hint_label.text = "Prototype complete! Score: %d" % score
+func _on_delivery(payout: int) -> void:
+	set_hint("Truck left! +$%d — new part incoming." % payout)
 
 
-func _update_reputation() -> void:
-	_reputation_label.text = "Lab reputation: %.0f" % GameManager.lab_reputation
+func _refresh() -> void:
+	_money_label.text = "$%d" % GameManager.player_money
+	_xp_label.text = "XP %d" % GameManager.player_xp
+	_rep_label.text = "Rep %.0f" % GameManager.lab_reputation

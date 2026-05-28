@@ -14,6 +14,7 @@ enum ProcessingState {
 
 @export var contamination_level: float = 0.75
 @export var sample_id: String = "SMP-001"
+@export var tap_radius: float = 48.0
 
 var processing_state: ProcessingState = ProcessingState.ARRIVED
 var is_carried: bool = false
@@ -33,6 +34,10 @@ func _ready() -> void:
 	_label.text = sample_id
 
 
+func contains_world_point(world_pos: Vector2) -> bool:
+	return global_position.distance_to(world_pos) <= tap_radius
+
+
 func set_processing_state(state: ProcessingState) -> void:
 	processing_state = state
 	state_changed.emit(state)
@@ -45,7 +50,6 @@ func interact(worker: Worker) -> void:
 	if worker.carried_sample != null:
 		return
 	if global_position.distance_to(worker.global_position) > worker.interaction_range:
-		worker.move_to(global_position)
 		return
 	_pick_up(worker)
 
@@ -56,6 +60,7 @@ func _pick_up(worker: Worker) -> void:
 	picked_up.emit(worker)
 	set_collision_layer_value(3, false)
 	set_collision_mask_value(2, false)
+	TouchInput.vibrate_feedback(25)
 
 
 func release(at_position: Vector2) -> void:

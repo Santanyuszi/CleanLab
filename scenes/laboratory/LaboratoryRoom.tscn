@@ -1,49 +1,68 @@
 [gd_scene load_steps=8 format=3 uid="uid://labroom001"]
 
 [ext_resource type="Script" path="res://scripts/laboratory/LaboratoryRoom.gd" id="1_lab"]
-[ext_resource type="PackedScene" uid="uid://worker001" path="res://scenes/entities/Worker.tscn" id="2_worker"]
-[ext_resource type="PackedScene" uid="uid://sample001" path="res://scenes/entities/Sample.tscn" id="3_sample"]
-[ext_resource type="PackedScene" uid="uid://washing001" path="res://scenes/stations/WashingStation.tscn" id="4_wash"]
-[ext_resource type="PackedScene" uid="uid://drying001" path="res://scenes/stations/DryingStation.tscn" id="5_dry"]
-[ext_resource type="PackedScene" uid="uid://microscope001" path="res://scenes/stations/MicroscopeStation.tscn" id="6_micro"]
-[ext_resource type="PackedScene" uid="uid://gamehud001" path="res://ui/GameHUD.tscn" id="7_hud"]
-[ext_resource type="PackedScene" uid="uid://minigame001" path="res://minigames/MicroscopeMinigame.tscn" id="8_mini"]
+[ext_resource type="Script" path="res://scripts/laboratory/DragController.gd" id="2_drag"]
+[ext_resource type="PackedScene" uid="uid://part001" path="res://scenes/entities/Part.tscn" id="3_part"]
+[ext_resource type="PackedScene" uid="uid://extraction001" path="res://scenes/stations/ExtractionCabinet.tscn" id="4_ext"]
+[ext_resource type="PackedScene" uid="uid://dryingoven001" path="res://scenes/stations/DryingOven.tscn" id="5_dry"]
+[ext_resource type="PackedScene" uid="uid://microscopebench001" path="res://scenes/stations/MicroscopeBench.tscn" id="6_micro"]
+[ext_resource type="PackedScene" uid="uid://truckdock001" path="res://scenes/stations/TruckDock.tscn" id="7_truck"]
 
 [node name="LaboratoryRoom" type="Node2D"]
 script = ExtResource("1_lab")
-sample_scene = ExtResource("3_sample")
+part_scene = ExtResource("3_part")
 
-[node name="Floor" type="ColorRect" parent="."]
-offset_right = 1280.0
+[node name="LabArt" type="ColorRect" parent="."]
+offset_right = 1600.0
 offset_bottom = 720.0
-color = Color(0.08, 0.1, 0.14, 1)
+color = Color(0.14, 0.17, 0.22, 1)
 
-[node name="Bench" type="ColorRect" parent="."]
+[node name="LabArtLabel" type="Label" parent="."]
+offset_left = 400.0
+offset_top = 280.0
+offset_right = 1200.0
+offset_bottom = 360.0
+theme_override_colors/font_color = Color(0.35, 0.42, 0.52, 1)
+theme_override_font_sizes/font_size = 22
+text = "CLEANLAB — Laboratory floor (replace with side-view art)"
+horizontal_alignment = 1
+
+[node name="IncomingPad" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(180, 520)
+
+[node name="IncomingLabel" type="Label" parent="."]
 offset_left = 80.0
-offset_top = 220.0
-offset_right = 1100.0
-offset_bottom = 380.0
-color = Color(0.12, 0.16, 0.22, 1)
-
-[node name="SpawnPoint" type="Marker2D" parent="."]
-position = Vector2(140, 300)
-
-[node name="Worker" parent="." instance=ExtResource("2_worker")]
-position = Vector2(220, 300)
+offset_top = 440.0
+offset_right = 280.0
+offset_bottom = 480.0
+theme_override_colors/font_color = Color(0.95, 0.7, 0.45, 1)
+text = "Incoming"
+horizontal_alignment = 1
 
 [node name="Stations" type="Node2D" parent="."]
 
-[node name="WashingStation" parent="Stations" instance=ExtResource("4_wash")]
-position = Vector2(400, 300)
+[node name="ExtractionCabinet" parent="Stations" instance=ExtResource("4_ext")]
+position = Vector2(380, 480)
 
-[node name="DryingStation" parent="Stations" instance=ExtResource("5_dry")]
-position = Vector2(640, 300)
+[node name="DryingOven" parent="Stations" instance=ExtResource("5_dry")]
+position = Vector2(720, 480)
 
 [node name="MicroscopeStation" parent="Stations" instance=ExtResource("6_micro")]
-position = Vector2(880, 300)
+unique_name_in_owner = true
+position = Vector2(1060, 480)
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="TruckDock" parent="Stations" instance=ExtResource("7_truck")]
+position = Vector2(1380, 560)
 
-[node name="GameHUD" parent="UI" instance=ExtResource("7_hud")]
+[node name="TruckLabel" type="Label" parent="."]
+offset_left = 1300.0
+offset_top = 600.0
+offset_right = 1500.0
+offset_bottom = 640.0
+theme_override_colors/font_color = Color(0.55, 0.9, 0.65, 1)
+text = "Truck"
+horizontal_alignment = 1
 
-[node name="MicroscopeMinigame" parent="." instance=ExtResource("8_mini")]
+[node name="DragController" type="Node" parent="."]
+script = ExtResource("2_drag")
