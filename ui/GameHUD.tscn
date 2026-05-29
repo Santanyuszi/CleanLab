@@ -63,6 +63,6 @@ grow_horizontal = 2
 [node name="HintLabel" type="Label" parent="HintBar"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
-text = "Drag parts between stations."
+text = "Tap samples through stations."
 horizontal_alignment = 1
 autowrap_mode = 2

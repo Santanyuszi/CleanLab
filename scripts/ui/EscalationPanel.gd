@@ -11,11 +11,7 @@ func _ready() -> void:
 
 func _refresh() -> void:
 	if GameManager.alert_count > 0:
-		_body.text = (
-			"Blue fibers detected repeatedly.\n"
-			"Risk: %.0f%% · %d open ticket(s)\n"
-			"(Investigation UI coming soon)"
-			% [GameManager.escalation_risk * 100.0, GameManager.alert_count]
-		)
+		var template := "Blue fibers detected repeatedly.\nRisk: %.0f%% - %d open ticket(s)\n(Investigation UI coming soon)"
+		_body.text = template % [GameManager.escalation_risk * 100.0, GameManager.alert_count]
 	else:
 		_body.text = "No active escalations."

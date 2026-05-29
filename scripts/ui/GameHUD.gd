@@ -22,7 +22,7 @@ func set_hint(text: String) -> void:
 func _on_layer(layer: GameManager.GameLayer) -> void:
 	match layer:
 		GameManager.GameLayer.LAB:
-			set_hint("Drag parts between stations. Collect when timer finishes.")
+			set_hint("Tap the sample, then tap finished stations to advance.")
 		GameManager.GameLayer.PROBLEM_INSPECTION:
 			set_hint("QC inspection open — verify the particle.")
 

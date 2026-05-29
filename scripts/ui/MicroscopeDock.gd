@@ -62,7 +62,8 @@ func _process(delta: float) -> void:
 	if not _active:
 		return
 	_time_left -= delta
-	_timer.text = "%02d:%02d" % [int(_time_left) / 60, int(_time_left) % 60]
+	var seconds_left := int(_time_left)
+	_timer.text = "%02d:%02d" % [floori(seconds_left / 60.0), seconds_left % 60]
 	if _time_left <= 0.0:
 		_finish()
 

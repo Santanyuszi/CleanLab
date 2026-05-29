@@ -1,6 +1,6 @@
 class_name WorkStation
 extends Area2D
-## Kitchen-style station: drop part → timer → tap to collect → drag onward.
+## Station: tap sample here, wait for timer, tap finished part to advance.
 
 enum Kind {
 	EXTRACTION,
@@ -44,9 +44,9 @@ func _ready() -> void:
 	_title.text = station_title
 	_progress.max_value = 1.0
 	if station_kind == Kind.TRUCK:
-		_set_status("Deliver report here")
+		_set_status("Reports Out")
 	else:
-		_set_status("Drop part here")
+		_set_status("Tap to start")
 	_emit_status()
 
 
@@ -81,7 +81,7 @@ func try_accept_part(part: Part) -> bool:
 	_process_duration = GameManager.process_time_for(device_key, base_process_seconds)
 	_timer = _process_duration
 	_progress.value = 0.0
-	_set_status("Processing…")
+	_set_status("Processing...")
 	_set_platform_color(Color(0.12, 0.42, 0.62))
 	_emit_status()
 	if held_part:
@@ -101,7 +101,7 @@ func pick_up() -> Part:
 	slot_state = SlotState.EMPTY
 	part.is_on_station = false
 	_progress.value = 0.0
-	_set_status("Drop part here")
+	_set_status("Tap to start")
 	_set_platform_color(Color(0.18, 0.22, 0.28))
 	_emit_status()
 	return part
@@ -113,12 +113,12 @@ func try_deliver_report(part: Part) -> bool:
 	if part.current_step != Part.Step.REPORT_READY:
 		return false
 	var payout: int = part.order.payout
-	_set_status("Departing…")
+	_set_status("Departing...")
 	_set_platform_color(Color(0.2, 0.55, 0.35))
 	GameManager.unregister_part(part.order.order_id)
 	GameManager.complete_delivery(payout)
 	part.queue_free()
-	_set_status("Awaiting report")
+	_set_status("Reports Out")
 	_set_platform_color(Color(0.16, 0.2, 0.26))
 	return true
 
@@ -130,11 +130,11 @@ func resume_after_inspection(passed: bool) -> void:
 		GameManager.apply_inspection_penalty()
 		_timer = _process_duration * 0.5
 		slot_state = SlotState.PROCESSING
-		_set_status("Re-analysis…")
+		_set_status("Re-analysis...")
 		return
 	held_part.set_report_ready()
 	slot_state = SlotState.READY
-	_set_status("Tap to collect report")
+	_set_status("Tap report")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
 	part_ready.emit(self)
 
@@ -155,20 +155,23 @@ func _on_timer_finished() -> void:
 	if station_kind == Kind.MICROSCOPE:
 		if randf() < GameManager.MINIGAME_PROBLEM_CHANCE:
 			slot_state = SlotState.AWAITING_INSPECTION
-			_set_status("QC problem!")
+			_set_status("Revision")
 			_set_platform_color(Color(0.62, 0.28, 0.55))
 			_emit_status()
 			var claims: Array = _build_inspection_claims()
 			GameManager.enter_problem_inspection(held_part, claims)
 			return
-		slot_state = SlotState.AWAITING_INSPECTION
-		_set_status("Inspection…")
+		held_part.set_report_ready()
+		slot_state = SlotState.READY
+		_set_status("Tap report")
+		_set_platform_color(Color(0.18, 0.58, 0.38))
 		_emit_status()
-		GameManager.start_microscope_session(held_part)
+		processing_finished.emit(self)
+		part_ready.emit(self)
 		return
 	held_part.advance_step_after_station(station_kind)
 	slot_state = SlotState.READY
-	_set_status("Tap to collect")
+	_set_status("Tap part")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
 	_emit_status()
 	processing_finished.emit(self)

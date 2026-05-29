@@ -1,10 +1,9 @@
 extends Node
-## Drag-and-drop between incoming pad, devices, and truck.
+## Tap-to-route controller between incoming, stations, and reports out.
 
 @export var lab_path: NodePath = ^".."
 
 var _lab: Node2D
-var _carried: Part = null
 var _shell: LabShell = null
 
 
@@ -15,32 +14,14 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if GameManager.game_layer == GameManager.GameLayer.PROBLEM_INSPECTION:
+	if GameManager.game_layer != GameManager.GameLayer.LAB:
 		return
 	var world: Vector2 = _event_world(event)
 	if world == Vector2.INF:
 		return
 	if _is_press(event):
-		if _carried == null:
-			_try_pick(world)
+		_handle_tap(world)
 		get_viewport().set_input_as_handled()
-	elif _is_release(event):
-		if _carried:
-			_try_drop(world)
-			get_viewport().set_input_as_handled()
-
-
-func _input(event: InputEvent) -> void:
-	if _carried == null or GameManager.game_layer == GameManager.GameLayer.PROBLEM_INSPECTION:
-		return
-	var world: Vector2
-	if event is InputEventScreenDrag:
-		world = TouchInput.screen_to_world(_lab, event.position)
-	elif event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_LEFT):
-		world = _lab.get_global_mouse_position()
-	else:
-		return
-	_carried.global_position = world
 
 
 func _event_world(event: InputEvent) -> Vector2:
@@ -61,56 +42,98 @@ func _is_press(event: InputEvent) -> bool:
 	return false
 
 
-func _is_release(event: InputEvent) -> bool:
-	if event is InputEventScreenTouch:
-		return not event.pressed
-	if event is InputEventMouseButton:
-		return not event.pressed and event.button_index == MOUSE_BUTTON_LEFT
-	return false
-
-
-func _try_pick(world: Vector2) -> void:
+func _handle_tap(world: Vector2) -> void:
+	var ready_station := _ready_station_part_at(world)
+	if ready_station:
+		_route_part(ready_station.pick_up())
+		return
 	var station: WorkStation = _station_at(world)
 	if station and station.can_pick_up():
-		_carried = station.pick_up()
-		_carried.begin_drag()
-		_hint("Drag to the next station.")
+		_route_part(station.pick_up())
 		return
+	if station and station.held_part != null:
+		_hint("Processing at %s." % station.station_title)
+		return
+	var part := _part_at(world)
+	if part:
+		_route_part(part)
+		return
+	_hint("Tap the orange sample or a finished station.")
+
+
+func _ready_station_part_at(world: Vector2) -> WorkStation:
+	for node in get_tree().get_nodes_in_group("work_station"):
+		var station := node as WorkStation
+		if station == null or not station.can_pick_up():
+			continue
+		if station.held_part and station.held_part.global_position.distance_to(world) < 62.0:
+			return station
+	return null
+
+
+func _part_at(world: Vector2) -> Part:
 	for node in get_tree().get_nodes_in_group("draggable_part"):
 		var part: Part = node as Part
 		if part == null or part.is_on_station:
 			continue
 		if part.global_position.distance_to(world) < 56.0:
-			_carried = part
-			_carried.begin_drag()
-			_hint("Drag onto Extraction cabinet.")
-			return
+			return part
+	return null
 
 
-func _try_drop(world: Vector2) -> void:
-	if _carried == null:
+func _route_part(part: Part) -> void:
+	if part == null:
 		return
-	var station: WorkStation = _station_at(world)
-	if station:
-		if station.station_kind == WorkStation.Kind.TRUCK:
-			if station.try_deliver_report(_carried):
-				var payout: int = _carried.order.payout
-				_carried.end_drag()
-				_carried = null
-				_hint("Truck departed — +$%d" % payout)
-				_lab.call_deferred("_spawn_next_order")
-				return
-		if station.try_accept_part(_carried):
-			_drop_cleanup("Processing at %s…" % station.station_title)
-			return
-	_hint("Drop on an open station.")
-	_carried.global_position = world
+	if part.current_step == Part.Step.REPORT_READY:
+		_stage_report(part)
+		return
+	var station := _next_station_for(part)
+	if station == null:
+		_hint("Next station is not available.")
+		return
+	if not station.can_accept_part(part):
+		_hint("%s is not ready." % station.station_title)
+		return
+	var from_pos := part.global_position
+	if station.try_accept_part(part):
+		part.global_position = from_pos
+		_tween_part_to(part, station.get_slot_global_position())
+		_hint("%s started." % station.station_title)
 
 
-func _drop_cleanup(hint: String) -> void:
-	_carried.end_drag()
-	_carried = null
-	_hint(hint)
+func _next_station_for(part: Part) -> WorkStation:
+	var target_kind: WorkStation.Kind
+	match part.current_step:
+		Part.Step.INCOMING:
+			target_kind = WorkStation.Kind.EXTRACTION
+		Part.Step.EXTRACTED:
+			target_kind = WorkStation.Kind.DRYING
+		Part.Step.DRIED:
+			target_kind = WorkStation.Kind.MICROSCOPE
+		_:
+			return null
+	for node in get_tree().get_nodes_in_group("work_station"):
+		var station := node as WorkStation
+		if station and station.station_kind == target_kind:
+			return station
+	return null
+
+
+func _tween_part_to(part: Part, target: Vector2) -> void:
+	var tween := create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_QUAD)
+	tween.tween_property(part, "global_position", target, 0.22)
+
+
+func _stage_report(part: Part) -> void:
+	if GameManager.stage_report_for_shipping(part):
+		_tween_part_to(part, Vector2(1405, 555))
+		await get_tree().create_timer(0.24).timeout
+		if is_instance_valid(part):
+			part.queue_free()
+		_hint("Report staged. Send the truck when ready.")
+		_lab.call_deferred("_spawn_next_order")
 
 
 func _station_at(world: Vector2) -> WorkStation:

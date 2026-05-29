@@ -4,6 +4,6 @@
 
 [node name="TruckDock" instance=ExtResource("1_base")]
 station_kind = 3
-station_title = "Truck"
+station_title = "Reports Out"
 device_key = "truck"
 base_process_seconds = 1.0

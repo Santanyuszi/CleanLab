@@ -1,6 +1,6 @@
 class_name Part
 extends Area2D
-## Draggable product moving through lab stations (kitchen-style).
+## Product moving through lab stations.
 
 enum Step {
 	INCOMING,
@@ -69,12 +69,16 @@ func begin_drag() -> void:
 	is_dragging = true
 	is_on_station = false
 	z_index = 10
+	scale = Vector2(1.08, 1.08)
+	modulate = Color(1.15, 1.15, 1.15, 1.0)
 	picked_up.emit(self)
 
 
 func end_drag() -> void:
 	is_dragging = false
 	z_index = 0
+	scale = Vector2.ONE
+	modulate = Color.WHITE
 	dropped.emit(self)
 
 

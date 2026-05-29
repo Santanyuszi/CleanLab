@@ -10,15 +10,15 @@ extends PanelContainer
 
 
 func refresh() -> void:
-	_reputation.text = "Reputation: %.0f%%" % GameManager.lab_reputation
-	_level.text = "Level %d · Senior Analyst" % GameManager.player_level
-	_xp.text = "XP: %d / %d" % [GameManager.player_xp, GameManager.player_xp_to_next]
-	_money.text = "$%s" % _format_money(GameManager.player_money)
-	_samples.text = "Samples in Lab: %d / %d" % [
+	_level.text = "LEVEL\n%d  SENIOR ANALYST" % GameManager.player_level
+	_xp.text = "XP\n%d / %d" % [GameManager.player_xp, GameManager.player_xp_to_next]
+	_money.text = "MONEY\n$ %s" % _format_money(GameManager.player_money)
+	_reputation.text = "REPUTATION\n%.0f%%" % GameManager.lab_reputation
+	_samples.text = "SAMPLES\n%d / %d" % [
 		GameManager.samples_in_lab,
 		GameManager.max_samples_in_lab,
 	]
-	_time.text = "Day %d · %s" % [GameManager.game_day, GameManager.get_time_string()]
+	_time.text = "DAY %d\n%s" % [GameManager.game_day, GameManager.get_time_string()]
 
 
 func _format_money(amount: int) -> String:

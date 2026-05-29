@@ -25,6 +25,7 @@ var game_day: int = 34
 var game_minutes: int = 582
 var pending_ftir_count: int = 0
 var sample_queue: Array[Dictionary] = []
+var staged_reports: Array[Dictionary] = []
 
 var device_levels: Dictionary = {
 	"extraction": 3,
@@ -42,11 +43,13 @@ signal problem_inspection_resolved(part: Part, approved: bool)
 signal microscope_session_started(part: Part)
 signal microscopy_results_applied(summary: Dictionary)
 signal delivery_completed(payout: int)
+signal shipping_changed
 
 
 func start_run() -> void:
 	game_layer = GameLayer.LAB
 	sample_queue.clear()
+	staged_reports.clear()
 	samples_in_lab = 0
 	player_money = 125680
 	player_xp = 18450
@@ -57,10 +60,11 @@ func start_run() -> void:
 	layer_changed.emit(game_layer)
 	economy_changed.emit()
 	sample_queue_changed.emit()
+	shipping_changed.emit()
 
 
 func get_time_string() -> String:
-	var h: int = game_minutes / 60
+	var h: int = floori(game_minutes / 60.0)
 	var m: int = game_minutes % 60
 	return "%02d:%02d" % [h, m]
 
@@ -104,6 +108,39 @@ func unregister_part(part_id: String) -> void:
 	sample_queue_changed.emit()
 
 
+func stage_report_for_shipping(part: Part) -> bool:
+	if part == null or part.current_step != Part.Step.REPORT_READY:
+		return false
+	staged_reports.append({
+		"name": part.order.order_id,
+		"payout": part.order.payout,
+	})
+	unregister_part(part.order.order_id)
+	shipping_changed.emit()
+	return true
+
+
+func get_staged_report_count() -> int:
+	return staged_reports.size()
+
+
+func get_staged_report_total() -> int:
+	var total := 0
+	for report in staged_reports:
+		total += int(report.get("payout", 0))
+	return total
+
+
+func send_truck() -> int:
+	if staged_reports.is_empty():
+		return 0
+	var payout := get_staged_report_total()
+	staged_reports.clear()
+	complete_delivery(payout)
+	shipping_changed.emit()
+	return payout
+
+
 func start_microscope_session(part: Part) -> void:
 	game_layer = GameLayer.MICROSCOPY
 	layer_changed.emit(game_layer)
@@ -123,9 +160,13 @@ func leave_problem_inspection() -> void:
 	layer_changed.emit(game_layer)
 
 
+func resolve_problem_inspection(part: Part, approved: bool) -> void:
+	problem_inspection_resolved.emit(part, approved)
+
+
 func complete_delivery(payout: int) -> void:
 	player_money += payout
-	player_xp += payout / 5
+	player_xp += floori(payout / 5.0)
 	lab_reputation = clampf(lab_reputation + 1.5, 0.0, 100.0)
 	game_minutes += 3
 	economy_changed.emit()
@@ -142,8 +183,8 @@ func apply_microscopy_results(summary: Dictionary) -> void:
 	var score: int = int(summary.get("score", 0))
 	var accuracy: float = float(summary.get("accuracy", 0.0))
 	var wrong: int = int(summary.get("wrong", 0))
-	player_xp += score / 8 + int(accuracy * 20.0)
-	player_money += score / 4
+	player_xp += floori(score / 8.0) + int(accuracy * 20.0)
+	player_money += floori(score / 4.0)
 	lab_reputation = clampf(lab_reputation + (accuracy - 0.5) * 6.0 - wrong, 0.0, 100.0)
 	game_layer = GameLayer.LAB
 	layer_changed.emit(game_layer)

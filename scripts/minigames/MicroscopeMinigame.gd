@@ -241,8 +241,8 @@ func _show_results(summary: Dictionary) -> void:
 		% [
 			summary.score,
 			int(summary.accuracy * 100.0),
-			summary.score / 8 + int(summary.accuracy * 20.0),
-			summary.score / 4,
+			floori(summary.score / 8.0) + int(summary.accuracy * 20.0),
+			floori(summary.score / 4.0),
 			GameManager.escalation_risk * 100.0,
 		]
 	)

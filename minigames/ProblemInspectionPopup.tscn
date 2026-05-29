@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://problempopup001"]
+[gd_scene load_steps=4 format=3 uid="uid://problempopup001"]
 
 [ext_resource type="Script" path="res://scripts/minigames/ProblemInspectionPopup.gd" id="1_popup"]
+[ext_resource type="Script" path="res://scripts/minigames/FilterCircle.gd" id="2_filter"]
+[ext_resource type="Script" path="res://scripts/minigames/SortParticleToken.gd" id="3_token"]
 
 [node name="ProblemInspectionPopup" type="CanvasLayer"]
 layer = 20
@@ -32,10 +34,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -280.0
-offset_top = -260.0
-offset_right = 280.0
-offset_bottom = 260.0
+offset_left = -430.0
+offset_top = -330.0
+offset_right = 430.0
+offset_bottom = 330.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -54,22 +56,44 @@ theme_override_constants/separation = 16
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.55, 0.45, 1)
 theme_override_font_sizes/font_size = 20
-text = "QC Problem — Verify Particle"
+text = "QC Revision - Sort Particles"
 horizontal_alignment = 1
 
 [node name="ParticleView" type="ColorRect" parent="Root/Panel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 200)
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 500)
 layout_mode = 2
-color = Color(0.75, 0.8, 0.9, 1)
+color = Color(0.035, 0.05, 0.06, 1)
+
+[node name="FilterCircle" type="Control" parent="Root/Panel/Margin/VBox/ParticleView"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -150.0
+offset_right = 150.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_filter")
+
+[node name="TokenTemplate" type="Control" parent="Root/Panel/Margin/VBox/ParticleView"]
+visible = false
+script = ExtResource("3_token")
 
 [node name="ClaimLabel" type="Label" parent="Root/Panel/Margin/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "Claim"
+theme_override_font_sizes/font_size = 15
+text = "Drag each particle into the matching corner."
 horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="Buttons" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
