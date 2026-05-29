@@ -74,7 +74,7 @@ func _try_pick(world: Vector2) -> void:
 	if station and station.can_pick_up():
 		_carried = station.pick_up()
 		_carried.begin_drag()
-		_hint("Drag to the next station.")
+		_hint(_drag_hint_for(_carried))
 		return
 	for node in get_tree().get_nodes_in_group("draggable_part"):
 		var part: Part = node as Part
@@ -83,7 +83,7 @@ func _try_pick(world: Vector2) -> void:
 		if part.global_position.distance_to(world) < 56.0:
 			_carried = part
 			_carried.begin_drag()
-			_hint("Drag onto Extraction cabinet.")
+			_hint(_drag_hint_for(_carried))
 			return
 
 
@@ -95,9 +95,10 @@ func _try_drop(world: Vector2) -> void:
 		if station.station_kind == WorkStation.Kind.TRUCK:
 			if station.try_deliver_report(_carried):
 				var payout: int = _carried.order.payout
+				var name: String = _carried.order.display_name
 				_carried.end_drag()
 				_carried = null
-				_hint("Truck departed — +$%d" % payout)
+				_hint("Truck departed — +$%d  ·  %s" % [payout, name])
 				_lab.call_deferred("_spawn_next_order")
 				return
 		if station.try_accept_part(_carried):
@@ -124,3 +125,10 @@ func _station_at(world: Vector2) -> WorkStation:
 func _hint(text: String) -> void:
 	if _shell:
 		_shell.set_hint(text)
+
+
+func _drag_hint_for(part: Part) -> String:
+	if part.current_step == Part.Step.REPORT_READY:
+		return "%s — drag the report to the Truck Dock." % part.order.display_name
+	var destination := part.next_station_name()
+	return "%s — drag to %s." % [part.order.display_name, destination]

@@ -7,6 +7,8 @@ enum Kind {
 	DRYING,
 	MICROSCOPE,
 	TRUCK,
+	SEM,
+	FTIR,
 }
 
 enum SlotState {
@@ -85,7 +87,7 @@ func try_accept_part(part: Part) -> bool:
 	_set_platform_color(Color(0.12, 0.42, 0.62))
 	_emit_status()
 	if held_part:
-		GameManager.update_queue_stage(held_part.order.order_id, station_title)
+		GameManager.update_queue_for_part(held_part, station_title)
 	return true
 
 
@@ -132,10 +134,14 @@ func resume_after_inspection(passed: bool) -> void:
 		slot_state = SlotState.PROCESSING
 		_set_status("Re-analysis…")
 		return
-	held_part.set_report_ready()
+	held_part.advance_step_after_station(station_kind)
 	slot_state = SlotState.READY
-	_set_status("Tap to collect report")
+	if held_part.current_step == Part.Step.REPORT_READY:
+		_set_status("Tap to collect report")
+	else:
+		_set_status("Tap to collect")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
+	GameManager.update_queue_for_part(held_part, "Ready")
 	part_ready.emit(self)
 
 
@@ -153,7 +159,8 @@ func _on_timer_finished() -> void:
 	if held_part == null:
 		return
 	if station_kind == Kind.MICROSCOPE:
-		if randf() < GameManager.MINIGAME_PROBLEM_CHANCE:
+		var chance := held_part.order.problem_chance if held_part.order != null else GameManager.MINIGAME_PROBLEM_CHANCE
+		if randf() < chance:
 			slot_state = SlotState.AWAITING_INSPECTION
 			_set_status("QC problem!")
 			_set_platform_color(Color(0.62, 0.28, 0.55))
@@ -171,6 +178,7 @@ func _on_timer_finished() -> void:
 	_set_status("Tap to collect")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
 	_emit_status()
+	GameManager.update_queue_for_part(held_part, "Ready")
 	processing_finished.emit(self)
 	part_ready.emit(self)
 
