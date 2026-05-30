@@ -19,11 +19,13 @@ func _rebuild() -> void:
 		child.queue_free()
 	for entry in GameManager.sample_queue:
 		var row := Label.new()
-		row.text = "• %s — %s [%s]" % [entry.name, entry.stage, entry.priority]
+		row.text = "• %s — %s [%s]" % [entry.get("part_name", entry.name), entry.stage, entry.priority]
 		row.add_theme_font_size_override("font_size", 13)
+		if bool(entry.get("broken", false)):
+			row.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
 		_list.add_child(row)
 	if _list.get_child_count() == 0:
 		var empty := Label.new()
 		empty.text = "No active queue"
-		empty.add_theme_color_override("font_color", Color(0.55, 0.6, 0.68))
+		empty.add_theme_color_override("font_color", Color(0.42, 0.55, 0.54))
 		_list.add_child(empty)

@@ -10,7 +10,8 @@ const WRONG_REPUTATION: float = -3.0
 const CORRECT_REPUTATION: float = 0.6
 const SWIPE_MIN_DISTANCE: float = 80.0
 
-@export var particles_per_session: int = 10
+@export var min_particles_per_session: int = 1
+@export var max_particles_per_session: int = 2
 @export var particle_scene: PackedScene
 
 @onready var _particle_field: Control = $Root/Content/ParticleField
@@ -136,7 +137,8 @@ func _spawn_particles() -> void:
 	if field_size.x < 10.0:
 		field_size = Vector2(900, 360)
 	var margin := 40.0
-	for i in particles_per_session:
+	var particle_count := randi_range(min_particles_per_session, max_particles_per_session)
+	for i in particle_count:
 		var spot: ParticleSpot = particle_scene.instantiate()
 		_particle_field.add_child(spot)
 		var p_class := randi() % 5 as ParticleTypes.Class

@@ -2,7 +2,8 @@ class_name ProblemInspectionPopup
 extends CanvasLayer
 ## QC revision popup: drag particles from the filter into the four corner groups.
 
-const PARTICLE_COUNT := 12
+const MIN_PARTICLE_COUNT := 1
+const MAX_PARTICLE_COUNT := 2
 const TOKEN_SCRIPT := preload("res://scripts/minigames/SortParticleToken.gd")
 const CLASS_REGULAR := 0
 const CLASS_METALLIC := 1
@@ -24,6 +25,7 @@ var _tokens: Array[Control] = []
 var _zones: Dictionary = {}
 var _completed := 0
 var _mistakes := 0
+var _particle_count := MIN_PARTICLE_COUNT
 
 
 func _ready() -> void:
@@ -48,6 +50,7 @@ func open(part: Part, station: WorkStation) -> void:
 	_station = station
 	_completed = 0
 	_mistakes = 0
+	_particle_count = randi_range(MIN_PARTICLE_COUNT, MAX_PARTICLE_COUNT)
 	visible = true
 	process_mode = Node.PROCESS_MODE_INHERIT
 	await get_tree().process_frame
@@ -92,7 +95,7 @@ func _build_zones() -> void:
 func _spawn_tokens() -> void:
 	var center := _board.size * 0.5
 	var radius := minf(_board.size.x, _board.size.y) * 0.22
-	for i in PARTICLE_COUNT:
+	for i in _particle_count:
 		var token: Control = TOKEN_SCRIPT.new()
 		_board.add_child(token)
 		var p_class := i % 4
@@ -115,7 +118,7 @@ func _on_token_dropped(token: Control) -> void:
 			if not ok:
 				_mistakes += 1
 			_update_status()
-			if _completed == PARTICLE_COUNT:
+			if _completed == _particle_count:
 				_finish()
 			return
 	_update_status("Place the particle into one of the four groups.")
@@ -154,7 +157,7 @@ func _update_status(message: String = "") -> void:
 	if message != "":
 		_status.text = message
 		return
-	_status.text = "%d / %d sorted correctly. Mistakes: %d" % [_completed - _mistakes, PARTICLE_COUNT, _mistakes]
+	_status.text = "%d / %d sorted correctly. Mistakes: %d" % [_completed - _mistakes, _particle_count, _mistakes]
 
 
 func _clear_tokens() -> void:

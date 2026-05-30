@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://workstation001"]
+[gd_scene load_steps=4 format=3 uid="uid://workstation001"]
 
 [ext_resource type="Script" path="res://scripts/stations/WorkStation.gd" id="1_ws"]
+[ext_resource type="Script" path="res://scripts/stations/DeviceArtwork.gd" id="2_art"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ws"]
 size = Vector2(170, 70)
@@ -11,6 +12,7 @@ collision_mask = 0
 script = ExtResource("1_ws")
 
 [node name="Platform" type="ColorRect" parent="."]
+visible = false
 offset_left = -80.0
 offset_top = -32.0
 offset_right = 80.0
@@ -19,6 +21,7 @@ mouse_filter = 2
 color = Color(0.01, 0.035, 0.045, 0.92)
 
 [node name="Title" type="Label" parent="."]
+visible = false
 offset_left = -72.0
 offset_top = -25.0
 offset_right = 72.0
@@ -30,6 +33,7 @@ text = "Station"
 horizontal_alignment = 1
 
 [node name="Status" type="Label" parent="."]
+visible = false
 offset_left = -72.0
 offset_top = -4.0
 offset_right = 72.0
@@ -41,6 +45,7 @@ text = "Tap to start"
 horizontal_alignment = 1
 
 [node name="ProgressBar" type="ProgressBar" parent="."]
+visible = false
 offset_left = -66.0
 offset_top = 20.0
 offset_right = 66.0
@@ -50,7 +55,12 @@ max_value = 1.0
 show_percentage = false
 
 [node name="Slot" type="Marker2D" parent="."]
+position = Vector2(0, 0)
+
+[node name="DeviceArtwork" type="Node2D" parent="."]
+visible = false
 position = Vector2(0, 158)
+script = ExtResource("2_art")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_ws")

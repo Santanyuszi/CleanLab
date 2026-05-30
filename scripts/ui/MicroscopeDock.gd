@@ -46,7 +46,7 @@ func _on_session_started(part: Part) -> void:
 	_combo_val = 1.0
 	_correct = 0
 	_wrong = 0
-	_total = 10
+	_total = randi_range(1, 2)
 	_selected = null
 	_clear_particles()
 	call_deferred("_deferred_spawn_particles")

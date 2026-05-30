@@ -16,7 +16,7 @@ func refresh() -> void:
 	_reputation.text = "REPUTATION\n%.0f%%" % GameManager.lab_reputation
 	_samples.text = "SAMPLES\n%d / %d" % [
 		GameManager.samples_in_lab,
-		GameManager.max_samples_in_lab,
+		GameManager.get_manufacturing_buffer_capacity(),
 	]
 	_time.text = "DAY %d\n%s" % [GameManager.game_day, GameManager.get_time_string()]
 

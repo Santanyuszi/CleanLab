@@ -1,0 +1,141 @@
+:root {
+  --bg-main: #040b12;
+  --bg-alt: #08111a;
+  --panel: #0b1621;
+  --panel-hover: #122130;
+  --accent: #00d7d0;
+  --accent-bright: #29fff8;
+  --selection: #00ffc8;
+  --success: #28e07d;
+  --warning: #ffb340;
+  --danger: #ff5b5b;
+  --text-primary: #f7fafc;
+  --text-secondary: #b9c7d3;
+  --text-disabled: #667381;
+  --glass-bg: rgba(15, 25, 35, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
+
+  --radius-button: 14px;
+  --radius-panel: 20px;
+  --radius-nav: 18px;
+  --radius-top-bar: 16px;
+  --radius-station: 14px;
+
+  --font-ui: "DM Sans", "Inter", sans-serif;
+}
+
+.cleanlab-screen {
+  width: 1920px;
+  height: 1080px;
+  padding: 40px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-panel);
+  backdrop-filter: blur(24px);
+}
+
+.top-status-bar {
+  height: 80px;
+  background: rgba(8, 17, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-top-bar);
+}
+
+.stat-block {
+  width: 220px;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.station-label {
+  width: 180px;
+  height: 72px;
+  background: rgba(5, 12, 18, 0.95);
+  border: 1px solid rgba(0, 215, 208, 0.3);
+  border-radius: var(--radius-station);
+  box-shadow: 0 0 24px rgba(0, 215, 208, 0.12);
+}
+
+.station-label[data-state="idle"] {
+  border-color: #2c3b48;
+  color: var(--text-disabled);
+}
+
+.station-label[data-state="processing"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 24px rgba(0, 215, 208, 0.1);
+}
+
+.station-label[data-state="completed"] {
+  border-color: var(--success);
+}
+
+.station-label[data-state="problem"] {
+  border-color: var(--warning);
+}
+
+.send-truck-button {
+  width: 220px;
+  height: 60px;
+  border-radius: var(--radius-button);
+  background: var(--accent);
+  color: var(--bg-main);
+  font-size: 18px;
+  font-weight: 600;
+  transition: background 150ms ease-out;
+}
+
+.send-truck-button:hover {
+  background: var(--accent-bright);
+}
+
+.send-truck-button:active {
+  background: #00b5ae;
+}
+
+.bottom-nav {
+  height: 90px;
+  background: rgba(4, 11, 18, 0.95);
+}
+
+.nav-button {
+  width: 220px;
+  height: 70px;
+  border-radius: var(--radius-nav);
+  color: var(--text-secondary);
+}
+
+.nav-button:hover {
+  background: rgba(0, 215, 208, 0.08);
+}
+
+.nav-button[data-selected="true"] {
+  background: rgba(0, 215, 208, 0.15);
+  border: 1px solid rgba(0, 215, 208, 0.4);
+  box-shadow: 0 0 24px rgba(0, 215, 208, 0.15);
+  color: var(--accent);
+}

@@ -45,10 +45,17 @@ func _is_press(event: InputEvent) -> bool:
 func _handle_tap(world: Vector2) -> void:
 	var ready_station := _ready_station_part_at(world)
 	if ready_station:
+		var ready_part := ready_station.get_ready_part_at(world)
+		if ready_part and ready_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_report():
+			_hint("Truck is full. Send it before the microscope can release more reports.")
+			return
 		_route_part(ready_station.pick_up())
 		return
 	var station: WorkStation = _station_at(world)
 	if station and station.can_pick_up():
+		if station.station_kind == WorkStation.Kind.MICROSCOPE and station.held_part and station.held_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_report():
+			_hint("Truck is full. Send it before the microscope can release more reports.")
+			return
 		_route_part(station.pick_up())
 		return
 	if station and station.held_part != null:
@@ -66,7 +73,7 @@ func _ready_station_part_at(world: Vector2) -> WorkStation:
 		var station := node as WorkStation
 		if station == null or not station.can_pick_up():
 			continue
-		if station.held_part and station.held_part.global_position.distance_to(world) < 62.0:
+		if station.get_ready_part_at(world):
 			return station
 	return null
 
@@ -128,12 +135,15 @@ func _tween_part_to(part: Part, target: Vector2) -> void:
 
 func _stage_report(part: Part) -> void:
 	if GameManager.stage_report_for_shipping(part):
-		_tween_part_to(part, Vector2(1405, 555))
+		_tween_part_to(part, Vector2(1238, 508))
 		await get_tree().create_timer(0.24).timeout
 		if is_instance_valid(part):
 			part.queue_free()
 		_hint("Report staged. Send the truck when ready.")
-		_lab.call_deferred("_spawn_next_order")
+	elif GameManager.is_order_broken(part.order.order_id):
+		_hint("Contract broken. This report can no longer be shipped.")
+	elif not GameManager.can_stage_report():
+		_hint("Truck is full. Send it before staging more reports.")
 
 
 func _station_at(world: Vector2) -> WorkStation:

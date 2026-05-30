@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://labshell001"]
+[gd_scene load_steps=10 format=3 uid="uid://labshell001"]
 
 [ext_resource type="Script" path="res://scripts/ui/LabShell.gd" id="1_shell"]
 [ext_resource type="Script" path="res://scripts/ui/HeaderBar.gd" id="2_header"]
@@ -6,7 +6,6 @@
 [ext_resource type="Script" path="res://scripts/ui/StationSidebarRow.gd" id="4_row"]
 [ext_resource type="Script" path="res://scripts/ui/SampleQueuePanel.gd" id="5_queue"]
 [ext_resource type="Script" path="res://scripts/ui/MicroscopeDock.gd" id="6_micro"]
-[ext_resource type="Script" path="res://scripts/ui/EscalationPanel.gd" id="7_esc"]
 [ext_resource type="PackedScene" uid="uid://labroom001" path="res://scenes/laboratory/LaboratoryRoom.tscn" id="8_lab"]
 [ext_resource type="PackedScene" uid="uid://particlespot001" path="res://scenes/minigames/ParticleSpot.tscn" id="9_spot"]
 [ext_resource type="PackedScene" uid="uid://problempopup001" path="res://minigames/ProblemInspectionPopup.tscn" id="10_popup"]
@@ -114,6 +113,7 @@ stretch_shrink = 1
 unique_name_in_owner = true
 handle_input_locally = true
 size = Vector2i(1600, 720)
+transparent_bg = true
 render_target_update_mode = 4
 
 [node name="LaboratoryRoom" parent="VBox/MiddleRow/LabViewportContainer/SubViewportContainer/LabViewport" instance=ExtResource("8_lab")]
@@ -472,35 +472,6 @@ text = "Ignore (I)"
 layout_mode = 2
 size_flags_horizontal = 3
 text = "SEM/FTIR (S)"
-
-[node name="EscalationPanel" type="PanelContainer" parent="VBox/BottomRow"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 1.2
-script = ExtResource("7_esc")
-
-[node name="Margin" type="MarginContainer" parent="VBox/BottomRow/EscalationPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 10
-
-[node name="VBox" type="VBoxContainer" parent="VBox/BottomRow/EscalationPanel/Margin"]
-layout_mode = 2
-
-[node name="Title" type="Label" parent="VBox/BottomRow/EscalationPanel/Margin/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 15
-text = "Escalation Overview"
-
-[node name="BodyLabel" type="Label" parent="VBox/BottomRow/EscalationPanel/Margin/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-text = "No escalations"
-autowrap_mode = 2
 
 [node name="BottomNav" type="PanelContainer" parent="VBox"]
 layout_mode = 2
