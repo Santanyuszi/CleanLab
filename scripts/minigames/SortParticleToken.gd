@@ -12,7 +12,8 @@ var _grab_offset := Vector2.ZERO
 
 func setup(p_class: int, local_pos: Vector2) -> void:
 	true_class = p_class
-	size = Vector2(42, 42)
+	size = Vector2(56, 56)
+	custom_minimum_size = size
 	position = local_pos - size * 0.5
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	queue_redraw()
@@ -56,10 +57,10 @@ func _draw() -> void:
 	var is_shiny := true_class == 1 or true_class == 3
 	var black := Color(0.015, 0.015, 0.014, 1.0)
 	if is_fiber:
-		draw_line(Vector2(8, 24), Vector2(34, 18), black, 5.0, true)
-		draw_line(Vector2(12, 29), Vector2(30, 23), black, 3.0, true)
+		draw_line(Vector2(11, 32), Vector2(45, 24), black, 7.0, true)
+		draw_line(Vector2(16, 39), Vector2(40, 31), black, 4.0, true)
 	else:
-		draw_circle(size * 0.5, 8.0, black)
+		draw_circle(size * 0.5, 11.0, black)
 	if is_shiny:
-		draw_circle(Vector2(16, 15), 3.2, Color.WHITE)
-		draw_line(Vector2(12, 10), Vector2(20, 18), Color.WHITE, 1.6, true)
+		draw_circle(Vector2(21, 20), 4.0, Color.WHITE)
+		draw_line(Vector2(16, 14), Vector2(26, 24), Color.WHITE, 2.0, true)

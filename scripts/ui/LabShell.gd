@@ -9,7 +9,14 @@ const PANEL_BORDER := Color(0.46, 0.78, 0.72, 0.72)
 const TEXT_DARK := Color(0.07, 0.16, 0.16)
 const TEXT_DIM := Color(0.28, 0.42, 0.42)
 const MINT_WASH := Color(0.84, 0.96, 0.92, 0.86)
-const MUSIC_LOOP_PATH := "res://assets/audio/733259__jadis0x__simple-video-game-music-loop.wav"
+const MUSIC_LOOP_PATH := "res://assets/audio/855613__noisera__nostalgic-retro-game-music-loop.mp3"
+const CLAIM_SFX_PATH := "res://assets/audio/467951__benzix2__ui-button-click.ogg"
+const AUDIO_BUS_MUSIC := "Music"
+const AUDIO_BUS_SFX := "SFX"
+const TOUCH_TARGET := 56.0
+const MOBILE_SIDE_MARGIN := 24.0
+const CONTRACT_POPUP_MAX_SIZE := Vector2(1180, 820)
+const SHOP_POPUP_MAX_SIZE := Vector2(900, 820)
 const SHOP_DEVICE_IMAGES := {
 	"extraction": "res://assets/shop/extraction_thumbnail.png",
 	"drying": "res://assets/shop/drying_thumbnail.png",
@@ -34,16 +41,28 @@ var _shop_panel: PanelContainer = null
 var _shop_rows: Dictionary = {}
 var _offer_refresh_accumulator: float = 0.0
 var _music_player: AudioStreamPlayer = null
-var _mute_button: Button = null
-var _mute_icon: Control = null
+var _sfx_player: AudioStreamPlayer = null
+var _claim_sfx_player: AudioStreamPlayer = null
+var _music_button: Button = null
+var _music_icon: Control = null
+var _sfx_button: Button = null
+var _sfx_icon: Control = null
 var _music_muted: bool = false
+var _sfx_muted: bool = false
+var _brand_title: Label = null
+var _contract_add_button: Button = null
+var _contract_add_tween: Tween = null
 
 
 func _ready() -> void:
 	add_to_group("lab_shell")
+	resized.connect(_layout_mobile_shell)
 	_apply_reference_skin()
+	_ensure_audio_buses()
 	_add_music_loop()
-	_add_mute_button()
+	_add_sfx_player()
+	_add_claim_sfx_player()
+	_add_audio_buttons()
 	_add_shipping_panel()
 	_add_contract_picker_popup()
 	_add_device_shop_panel()
@@ -65,7 +84,8 @@ func _ready() -> void:
 	_refresh_shipping()
 	_refresh_shop()
 	_on_layer_changed(GameManager.game_layer)
-	set_hint("Tap the sample to start extraction.")
+	set_hint("Open Contracts (+) to accept your first job.")
+	call_deferred("_layout_mobile_shell")
 
 
 func _add_music_loop() -> void:
@@ -73,15 +93,74 @@ func _add_music_loop() -> void:
 		return
 	_music_player = AudioStreamPlayer.new()
 	_music_player.name = "MusicLoop"
-	_music_player.bus = "Master"
+	_music_player.bus = AUDIO_BUS_MUSIC
 	_music_player.volume_db = -7.0
 	var stream := load(MUSIC_LOOP_PATH)
 	if stream is AudioStreamWAV:
 		stream = (stream as AudioStreamWAV).duplicate()
 		(stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	elif stream is AudioStreamMP3:
+		stream = (stream as AudioStreamMP3).duplicate()
+		(stream as AudioStreamMP3).loop = true
 	_music_player.stream = stream
 	add_child(_music_player)
 	call_deferred("_start_music_loop")
+
+
+func _ensure_audio_buses() -> void:
+	_ensure_audio_bus(AUDIO_BUS_MUSIC)
+	_ensure_audio_bus(AUDIO_BUS_SFX)
+
+
+func _ensure_audio_bus(bus_name: String) -> void:
+	if AudioServer.get_bus_index(bus_name) >= 0:
+		return
+	AudioServer.add_bus()
+	var index := AudioServer.bus_count - 1
+	AudioServer.set_bus_name(index, bus_name)
+	AudioServer.set_bus_send(index, "Master")
+
+
+func _add_sfx_player() -> void:
+	if _sfx_player != null:
+		return
+	_sfx_player = AudioStreamPlayer.new()
+	_sfx_player.name = "SfxPlayer"
+	_sfx_player.bus = AUDIO_BUS_SFX
+	_sfx_player.volume_db = -10.0
+	_sfx_player.stream = _make_click_stream()
+	add_child(_sfx_player)
+
+
+func _add_claim_sfx_player() -> void:
+	if _claim_sfx_player != null:
+		return
+	_claim_sfx_player = AudioStreamPlayer.new()
+	_claim_sfx_player.name = "ClaimSfxPlayer"
+	_claim_sfx_player.bus = AUDIO_BUS_SFX
+	_claim_sfx_player.volume_db = -4.0
+	_claim_sfx_player.stream = load(CLAIM_SFX_PATH)
+	add_child(_claim_sfx_player)
+
+
+func _make_click_stream() -> AudioStreamWAV:
+	var sample_rate := 44100
+	var frames := int(sample_rate * 0.055)
+	var bytes := PackedByteArray()
+	bytes.resize(frames * 2)
+	for i in frames:
+		var t := float(i) / float(sample_rate)
+		var env := maxf(1.0 - (t / 0.055), 0.0)
+		var wave := sin(TAU * 880.0 * t) * env * 0.18
+		var sample := clampi(int(wave * 32767.0), -32768, 32767)
+		bytes[i * 2] = sample & 0xff
+		bytes[i * 2 + 1] = (sample >> 8) & 0xff
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = bytes
+	return stream
 
 
 func _start_music_loop() -> void:
@@ -89,44 +168,59 @@ func _start_music_loop() -> void:
 		_music_player.play()
 
 
-func _add_mute_button() -> void:
-	if _mute_button != null:
+func _add_audio_buttons() -> void:
+	if _music_button != null:
 		return
 	var header_row := get_node_or_null("VBox/HeaderBar/Margin/HBox") as HBoxContainer
 	if header_row == null:
 		return
-	_mute_button = Button.new()
-	_mute_button.name = "MuteButton"
-	_mute_button.tooltip_text = "Mute music"
-	_mute_button.custom_minimum_size = Vector2(42, 42)
-	_mute_button.pressed.connect(_toggle_music_mute)
-	header_row.add_child(_mute_button)
-	_style_buttons(_mute_button)
+	_music_button = _make_audio_button("MusicButton", "Mute music", _toggle_music_mute, _draw_music_icon)
+	_music_icon = _music_button.get_node("Icon") as Control
+	header_row.add_child(_music_button)
+	_sfx_button = _make_audio_button("SfxButton", "Mute sound effects", _toggle_sfx_mute, _draw_sfx_icon)
+	_sfx_icon = _sfx_button.get_node("Icon") as Control
+	header_row.add_child(_sfx_button)
 
-	_mute_icon = Control.new()
-	_mute_icon.name = "SpeakerIcon"
-	_mute_icon.custom_minimum_size = Vector2(24, 24)
-	_mute_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_mute_icon.draw.connect(_draw_mute_icon)
-	_mute_button.add_child(_mute_icon)
-	_center_mute_icon()
-	_style_icon_button(_mute_button)
+
+func _make_audio_button(button_name: String, tooltip: String, pressed_callable: Callable, draw_callable: Callable) -> Button:
+	var button := Button.new()
+	button.name = button_name
+	button.tooltip_text = tooltip
+	button.custom_minimum_size = Vector2(TOUCH_TARGET, TOUCH_TARGET)
+	button.pressed.connect(pressed_callable)
+	_style_buttons(button)
+	_style_icon_button(button)
+
+	var icon := Control.new()
+	icon.name = "Icon"
+	icon.custom_minimum_size = Vector2(28, 28)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.draw.connect(draw_callable)
+	icon.position = (button.custom_minimum_size - icon.custom_minimum_size) * 0.5
+	button.add_child(icon)
+	return button
 
 
 func _toggle_music_mute() -> void:
 	_music_muted = not _music_muted
-	if _music_player:
-		_music_player.stream_paused = _music_muted
-	if _mute_button:
-		_mute_button.tooltip_text = "Unmute music" if _music_muted else "Mute music"
-	if _mute_icon:
-		_mute_icon.queue_redraw()
+	var index := AudioServer.get_bus_index(AUDIO_BUS_MUSIC)
+	if index >= 0:
+		AudioServer.set_bus_mute(index, _music_muted)
+	if _music_button:
+		_music_button.tooltip_text = "Unmute music" if _music_muted else "Mute music"
+	if _music_icon:
+		_music_icon.queue_redraw()
 
 
-func _center_mute_icon() -> void:
-	if _mute_button == null or _mute_icon == null:
-		return
-	_mute_icon.position = (_mute_button.custom_minimum_size - _mute_icon.custom_minimum_size) * 0.5
+func _toggle_sfx_mute() -> void:
+	_sfx_muted = not _sfx_muted
+	var index := AudioServer.get_bus_index(AUDIO_BUS_SFX)
+	if index >= 0:
+		AudioServer.set_bus_mute(index, _sfx_muted)
+	if _sfx_button:
+		_sfx_button.tooltip_text = "Unmute sound effects" if _sfx_muted else "Mute sound effects"
+	if _sfx_icon:
+		_sfx_icon.queue_redraw()
 
 
 func _style_icon_button(button: Button) -> void:
@@ -140,12 +234,40 @@ func _style_icon_button(button: Button) -> void:
 	button.focus_mode = Control.FOCUS_NONE
 
 
-func _draw_mute_icon() -> void:
-	if _mute_icon == null:
+func _draw_music_icon() -> void:
+	if _music_icon == null:
 		return
 	var stroke := Color(0.0, 0.36, 0.33)
 	var muted_stroke := Color(0.55, 0.64, 0.62)
 	var color := muted_stroke if _music_muted else stroke
+	var width := 2.2
+	_music_icon.draw_line(Vector2(9, 6), Vector2(9, 17), color, width, true)
+	_music_icon.draw_line(Vector2(9, 6), Vector2(18, 4), color, width, true)
+	_music_icon.draw_line(Vector2(18, 4), Vector2(18, 15), color, width, true)
+	_music_icon.draw_circle(Vector2(7, 18), 3.0, Color(color, 0.16))
+	_music_icon.draw_arc(Vector2(7, 18), 3.0, 0.0, TAU, 18, color, width, true)
+	_music_icon.draw_circle(Vector2(16, 16), 3.0, Color(color, 0.16))
+	_music_icon.draw_arc(Vector2(16, 16), 3.0, 0.0, TAU, 18, color, width, true)
+	if _music_muted:
+		_music_icon.draw_line(Vector2(4, 5), Vector2(21, 20), color, width, true)
+
+
+func _draw_sfx_icon() -> void:
+	_draw_speaker_icon(_sfx_icon, _sfx_muted)
+	if _sfx_icon == null:
+		return
+	var color := Color(0.55, 0.64, 0.62) if _sfx_muted else Color(0.0, 0.36, 0.33)
+	_sfx_icon.draw_circle(Vector2(18, 7), 1.2, color)
+	_sfx_icon.draw_circle(Vector2(20, 12), 1.2, color)
+	_sfx_icon.draw_circle(Vector2(18, 17), 1.2, color)
+
+
+func _draw_speaker_icon(icon: Control, muted: bool) -> void:
+	if icon == null:
+		return
+	var stroke := Color(0.0, 0.36, 0.33)
+	var muted_stroke := Color(0.55, 0.64, 0.62)
+	var color := muted_stroke if muted else stroke
 	var width := 2.2
 	var body := PackedVector2Array([
 		Vector2(4, 10),
@@ -155,14 +277,28 @@ func _draw_mute_icon() -> void:
 		Vector2(8, 14),
 		Vector2(4, 14),
 	])
-	_mute_icon.draw_colored_polygon(body, Color(color, 0.14))
-	_mute_icon.draw_polyline(body, color, width, true)
-	if _music_muted:
-		_mute_icon.draw_line(Vector2(17, 8), Vector2(22, 16), color, width, true)
-		_mute_icon.draw_line(Vector2(22, 8), Vector2(17, 16), color, width, true)
+	icon.draw_colored_polygon(body, Color(color, 0.14))
+	icon.draw_polyline(body, color, width, true)
+	if muted:
+		icon.draw_line(Vector2(17, 8), Vector2(22, 16), color, width, true)
+		icon.draw_line(Vector2(22, 8), Vector2(17, 16), color, width, true)
 	else:
-		_mute_icon.draw_arc(Vector2(14, 12), 5.0, -0.8, 0.8, 12, color, width, true)
-		_mute_icon.draw_arc(Vector2(14, 12), 8.0, -0.75, 0.75, 16, color, width, true)
+		icon.draw_arc(Vector2(14, 12), 5.0, -0.8, 0.8, 12, color, width, true)
+		icon.draw_arc(Vector2(14, 12), 8.0, -0.75, 0.75, 16, color, width, true)
+
+
+func _play_ui_click() -> void:
+	if _sfx_player == null or _sfx_muted:
+		return
+	_sfx_player.stop()
+	_sfx_player.play()
+
+
+func play_claim_sfx() -> void:
+	if _claim_sfx_player == null or _claim_sfx_player.stream == null or _sfx_muted:
+		return
+	_claim_sfx_player.stop()
+	_claim_sfx_player.play()
 
 
 func _process(delta: float) -> void:
@@ -173,6 +309,7 @@ func _process(delta: float) -> void:
 	GameManager.refresh_contract_offers(false)
 	if _contracts_popup != null and _contracts_popup.visible:
 		_refresh_contracts()
+	_update_contract_add_highlight()
 
 
 func get_lab_root() -> Node2D:
@@ -181,6 +318,79 @@ func get_lab_root() -> Node2D:
 
 func set_hint(text: String) -> void:
 	_sample_queue.set_status_line(text)
+
+
+func _layout_mobile_shell() -> void:
+	_layout_header()
+	_layout_popup(_contracts_popup, CONTRACT_POPUP_MAX_SIZE)
+	_layout_popup(_shop_panel, SHOP_POPUP_MAX_SIZE)
+	_refresh_contract_grid_columns()
+
+
+func _layout_header() -> void:
+	var width := size.x
+	var header_margin := get_node_or_null("VBox/HeaderBar/Margin") as MarginContainer
+	if header_margin:
+		header_margin.add_theme_constant_override("margin_left", 260 if width < 1500.0 else 300)
+		header_margin.add_theme_constant_override("margin_right", 10)
+	var header_row := get_node_or_null("VBox/HeaderBar/Margin/HBox") as HBoxContainer
+	if header_row:
+		header_row.add_theme_constant_override("separation", 5 if width < 1500.0 else 6)
+	if _brand_title:
+		_brand_title.add_theme_font_size_override("font_size", 21 if width < 1500.0 else 26)
+		_brand_title.size = Vector2(238 if width < 1500.0 else 260, 56)
+
+
+func _layout_popup(panel: PanelContainer, max_size: Vector2) -> void:
+	if panel == null:
+		return
+	var viewport_size := get_viewport_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	var margin := Vector2(MOBILE_SIDE_MARGIN, MOBILE_SIDE_MARGIN)
+	var target_size := Vector2(
+		minf(max_size.x, maxf(viewport_size.x - margin.x * 2.0, 320.0)),
+		minf(max_size.y, maxf(viewport_size.y - margin.y * 2.0, 320.0))
+	)
+	panel.position = ((viewport_size - target_size) * 0.5).floor()
+	panel.size = target_size
+
+
+func _contract_grid_columns() -> int:
+	if _contracts_popup == null:
+		return 2
+	var available_width := _contracts_popup.size.x - 72.0
+	if available_width >= 1040.0:
+		return 3
+	if available_width >= 650.0:
+		return 2
+	return 1
+
+
+func _refresh_contract_grid_columns() -> void:
+	if _contracts_sections == null:
+		return
+	var columns := _contract_grid_columns()
+	for section in _contracts_sections.get_children():
+		var grid := section.get_node_or_null("Cards") as GridContainer
+		if grid:
+			grid.columns = columns
+
+
+func _update_contract_add_highlight() -> void:
+	if _contract_add_button == null:
+		return
+	var popup_open := _contracts_popup != null and _contracts_popup.visible
+	var should_pulse := GameManager.sample_queue.is_empty() and not popup_open
+	if should_pulse and _contract_add_tween == null:
+		_contract_add_button.modulate = Color.WHITE
+		_contract_add_tween = create_tween().set_loops()
+		_contract_add_tween.tween_property(_contract_add_button, "modulate", Color(0.55, 1.0, 0.84, 1.0), 0.45)
+		_contract_add_tween.tween_property(_contract_add_button, "modulate", Color.WHITE, 0.45)
+	elif not should_pulse and _contract_add_tween != null:
+		_contract_add_tween.kill()
+		_contract_add_tween = null
+		_contract_add_button.modulate = Color.WHITE
 
 
 func _refresh_header() -> void:
@@ -230,15 +440,15 @@ func _apply_reference_skin() -> void:
 	_style_labels(self)
 	_style_progress_bars(self)
 	_style_buttons(self)
-	var title := Label.new()
-	title.name = "BrandTitle"
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title.text = "CLEANLAB\nTECHNICAL CLEANLINESS SIMULATOR"
-	title.add_theme_font_size_override("font_size", 26)
-	title.add_theme_color_override("font_color", TEXT_DARK)
-	title.position = Vector2(20, 9)
-	title.size = Vector2(260, 56)
-	add_child(title)
+	_brand_title = Label.new()
+	_brand_title.name = "BrandTitle"
+	_brand_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_brand_title.text = "CLEANLAB\nTECHNICAL CLEANLINESS SIMULATOR"
+	_brand_title.add_theme_font_size_override("font_size", 26)
+	_brand_title.add_theme_color_override("font_color", TEXT_DARK)
+	_brand_title.position = Vector2(20, 9)
+	_brand_title.size = Vector2(260, 56)
+	add_child(_brand_title)
 
 
 func _add_shipping_panel() -> void:
@@ -298,7 +508,7 @@ func _add_shipping_panel() -> void:
 
 	_send_truck_button = Button.new()
 	_send_truck_button.text = "SEND TRUCK"
-	_send_truck_button.custom_minimum_size = Vector2(0, 42)
+	_send_truck_button.custom_minimum_size = Vector2(0, TOUCH_TARGET)
 	_send_truck_button.pressed.connect(_on_send_truck_pressed)
 	vbox.add_child(_send_truck_button)
 	_style_buttons(panel)
@@ -337,10 +547,11 @@ func _add_contracts_panel(stack: VBoxContainer) -> void:
 
 	var add_button := Button.new()
 	add_button.text = "+"
-	add_button.custom_minimum_size = Vector2(42, 38)
+	add_button.custom_minimum_size = Vector2(TOUCH_TARGET, TOUCH_TARGET)
 	add_button.add_theme_font_size_override("font_size", 22)
 	add_button.pressed.connect(_toggle_contract_picker)
 	header.add_child(add_button)
+	_contract_add_button = add_button
 
 	_contracts_status = Label.new()
 	_contracts_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -368,8 +579,6 @@ func _add_contract_picker_popup() -> void:
 	_contracts_popup = PanelContainer.new()
 	_contracts_popup.name = "ContractPicker"
 	_contracts_popup.visible = false
-	_contracts_popup.position = Vector2(250, 96)
-	_contracts_popup.size = Vector2(980, 590)
 	_contracts_popup.z_index = 35
 	_apply_panel_style(_contracts_popup, Color(0.965, 0.995, 0.985, 0.98), PANEL_BORDER, 12, 1)
 	add_child(_contracts_popup)
@@ -398,18 +607,21 @@ func _add_contract_picker_popup() -> void:
 
 	var close := Button.new()
 	close.text = "CLOSE"
-	close.custom_minimum_size = Vector2(96, 40)
+	close.custom_minimum_size = Vector2(104, TOUCH_TARGET)
 	close.pressed.connect(_toggle_contract_picker)
 	header.add_child(close)
 
 	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(scroll)
 
 	_contracts_sections = VBoxContainer.new()
 	_contracts_sections.add_theme_constant_override("separation", 16)
+	_contracts_sections.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_contracts_sections)
 	_style_buttons(_contracts_popup)
+	_layout_popup(_contracts_popup, CONTRACT_POPUP_MAX_SIZE)
 
 
 func _add_device_shop_panel() -> void:
@@ -418,8 +630,6 @@ func _add_device_shop_panel() -> void:
 	_shop_panel = PanelContainer.new()
 	_shop_panel.name = "DeviceShopPanel"
 	_shop_panel.visible = false
-	_shop_panel.position = Vector2(520, 128)
-	_shop_panel.size = Vector2(680, 520)
 	_shop_panel.z_index = 30
 	_apply_panel_style(_shop_panel, Color(0.965, 0.995, 0.985, 0.98), PANEL_BORDER, 16, 1)
 	add_child(_shop_panel)
@@ -448,26 +658,40 @@ func _add_device_shop_panel() -> void:
 
 	var close := Button.new()
 	close.text = "CLOSE"
-	close.custom_minimum_size = Vector2(96, 40)
+	close.custom_minimum_size = Vector2(104, TOUCH_TARGET)
 	close.pressed.connect(_toggle_shop)
 	header.add_child(close)
+
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+
+	var rows := VBoxContainer.new()
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rows.add_theme_constant_override("separation", 12)
+	scroll.add_child(rows)
 
 	var catalog := GameManager.get_device_catalog()
 	for key in ["extraction", "drying", "microscope", "truck"]:
 		var row := _build_shop_row(key, catalog.get(key, {}))
-		vbox.add_child(row)
+		rows.add_child(row)
 
-	var shop_button := get_node_or_null("VBox/BottomNav/NavHBox/EscalationsTab") as Button
+	var shop_button := get_node_or_null("VBox/BottomNav/NavHBox/ShopTab") as Button
 	if shop_button:
 		shop_button.pressed.connect(_toggle_shop)
 	_style_buttons(_shop_panel)
+	_layout_popup(_shop_panel, SHOP_POPUP_MAX_SIZE)
 
 
 func _toggle_contract_picker() -> void:
 	if _contracts_popup == null:
 		return
 	_contracts_popup.visible = not _contracts_popup.visible
+	if _contracts_popup.visible:
+		_layout_popup(_contracts_popup, CONTRACT_POPUP_MAX_SIZE)
 	_refresh_contracts()
+	_update_contract_add_highlight()
 
 
 func _refresh_contracts() -> void:
@@ -490,6 +714,7 @@ func _refresh_contracts() -> void:
 		empty.text = "No active offers. New offers will arrive shortly."
 		empty.add_theme_color_override("font_color", TEXT_DIM)
 		_contracts_sections.add_child(empty)
+		_update_contract_add_highlight()
 		return
 	catalog.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var tier_a := int(a.get("tier", 1))
@@ -509,6 +734,7 @@ func _refresh_contracts() -> void:
 			_contracts_sections.add_child(section)
 		var grid := (sections[contract_tier] as VBoxContainer).get_node("Cards") as GridContainer
 		grid.add_child(_build_contract_card(contract))
+	_refresh_contract_grid_columns()
 	_style_buttons(_contracts_sections)
 
 
@@ -523,6 +749,7 @@ func _refresh_active_contracts() -> void:
 		empty.add_theme_font_size_override("font_size", 12)
 		empty.add_theme_color_override("font_color", Color(0.42, 0.55, 0.54))
 		_active_contracts_list.add_child(empty)
+		_update_contract_add_highlight()
 		return
 	var title := Label.new()
 	title.text = "ACTIVE"
@@ -537,17 +764,19 @@ func _refresh_active_contracts() -> void:
 		var label := Label.new()
 		label.text = "%s - %s" % [entry.get("part_name", entry.get("name", "Contract")), entry.get("stage", "")]
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.add_theme_font_size_override("font_size", 12)
 		label.add_theme_color_override("font_color", Color(0.12, 0.34, 0.32))
 		row.add_child(label)
 
 		var cancel := Button.new()
 		cancel.text = "CANCEL"
-		cancel.custom_minimum_size = Vector2(76, 28)
+		cancel.custom_minimum_size = Vector2(86, TOUCH_TARGET)
 		cancel.disabled = bool(entry.get("broken", false))
 		cancel.pressed.connect(_on_cancel_contract_pressed.bind(str(entry.get("name", ""))))
 		row.add_child(cancel)
 	_style_buttons(_active_contracts_list)
+	_update_contract_add_highlight()
 
 
 func _build_contract_section(tier: int) -> VBoxContainer:
@@ -557,7 +786,7 @@ func _build_contract_section(tier: int) -> VBoxContainer:
 
 	var grid := GridContainer.new()
 	grid.name = "Cards"
-	grid.columns = 3
+	grid.columns = _contract_grid_columns()
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	section.add_child(grid)
@@ -575,7 +804,7 @@ func _build_contract_section_label(tier: int) -> Label:
 
 func _build_contract_card(contract: Dictionary) -> PanelContainer:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(300, 180)
+	card.custom_minimum_size = Vector2(300, 300)
 	_apply_panel_style(card, Color(0.985, 1.0, 0.99, 0.96), PANEL_BORDER, 8, 1)
 
 	var margin := MarginContainer.new()
@@ -607,27 +836,31 @@ func _build_contract_card(contract: Dictionary) -> PanelContainer:
 	tier_label.add_theme_color_override("font_color", _tier_color(tier))
 	header.add_child(tier_label)
 
-	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 10)
-	vbox.add_child(body)
+	var thumbnail_panel := PanelContainer.new()
+	thumbnail_panel.custom_minimum_size = Vector2(0, 128)
+	thumbnail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apply_panel_style(thumbnail_panel, Color(0.93, 0.985, 0.965, 0.58), Color(0.68, 0.86, 0.8, 0.58), 8, 1)
+	vbox.add_child(thumbnail_panel)
 
 	var thumbnail := TextureRect.new()
-	thumbnail.custom_minimum_size = Vector2(92, 72)
-	thumbnail.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	thumbnail.custom_minimum_size = Vector2(0, 128)
+	thumbnail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	thumbnail.expand_mode = TextureRect.EXPAND_FIT_HEIGHT_PROPORTIONAL
 	thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	thumbnail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var thumbnail_path := str(contract.get("thumbnail", ""))
 	if not thumbnail_path.is_empty():
 		thumbnail.texture = load(thumbnail_path)
-	body.add_child(thumbnail)
+	thumbnail_panel.add_child(thumbnail)
 
 	var description := Label.new()
 	description.text = str(contract.get("description", ""))
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	description.add_theme_font_size_override("font_size", 12)
+	description.custom_minimum_size = Vector2(0, 40)
+	description.add_theme_font_size_override("font_size", 13)
 	description.add_theme_color_override("font_color", TEXT_DIM)
-	body.add_child(description)
+	vbox.add_child(description)
 
 	var sell := int(contract.get("sell_price", 0))
 	var cost := int(contract.get("manufacture_cost", 0))
@@ -642,13 +875,13 @@ func _build_contract_card(contract: Dictionary) -> PanelContainer:
 		float(contract.get("satisfaction_required", 0.0)),
 		seconds_left,
 	]
-	economics.add_theme_font_size_override("font_size", 12)
+	economics.add_theme_font_size_override("font_size", 13)
 	economics.add_theme_color_override("font_color", Color(0.0, 0.42, 0.38))
 	vbox.add_child(economics)
 
 	var button := Button.new()
 	button.text = "ACCEPT"
-	button.custom_minimum_size = Vector2(0, 36)
+	button.custom_minimum_size = Vector2(0, TOUCH_TARGET)
 	button.disabled = GameManager.player_money < cost * batch_size or GameManager.get_manufacturing_free_slots() < batch_size or seconds_left <= 0
 	button.pressed.connect(_on_contract_selected.bind(contract))
 	vbox.add_child(button)
@@ -817,11 +1050,15 @@ func _style_buttons(root: Node) -> void:
 	for child in root.get_children():
 		if child is Button:
 			var button := child as Button
+			button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, TOUCH_TARGET)
+			button.focus_mode = Control.FOCUS_NONE
 			button.add_theme_stylebox_override("normal", _button_style(Color(0.95, 0.995, 0.98, 0.96), PANEL_BORDER))
 			button.add_theme_stylebox_override("hover", _button_style(Color(0.84, 0.97, 0.93, 0.98), CYAN))
 			button.add_theme_stylebox_override("pressed", _button_style(Color(0.68, 0.9, 0.84, 0.98), CYAN))
 			button.add_theme_color_override("font_color", Color(0.0, 0.34, 0.31))
 			button.add_theme_color_override("font_hover_color", Color(0.0, 0.48, 0.44))
+			if not button.is_connected("pressed", _play_ui_click):
+				button.pressed.connect(_play_ui_click)
 		_style_buttons(child)
 
 
@@ -866,6 +1103,8 @@ func _toggle_shop() -> void:
 	if _shop_panel == null:
 		return
 	_shop_panel.visible = not _shop_panel.visible
+	if _shop_panel.visible:
+		_layout_popup(_shop_panel, SHOP_POPUP_MAX_SIZE)
 	_refresh_shop()
 
 

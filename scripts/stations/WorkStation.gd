@@ -169,7 +169,12 @@ func try_deliver_report(part: Part) -> bool:
 	_set_status("Departing...")
 	_set_platform_color(Color(0.2, 0.55, 0.35))
 	GameManager.unregister_part(part.order.order_id)
-	GameManager.complete_delivery(payout)
+	GameManager.complete_delivery(payout, [{
+		"name": part.order.order_id,
+		"payout": part.order.payout,
+		"tier": part.order.tier,
+		"satisfaction_required": part.order.satisfaction_required,
+	}])
 	part.queue_free()
 	_set_status("Reports Out")
 	_set_platform_color(Color(0.16, 0.2, 0.26))
@@ -212,17 +217,13 @@ func _on_timer_finished(part: Part) -> void:
 	if part == null:
 		return
 	if station_kind == Kind.MICROSCOPE:
-		if randf() < GameManager.MINIGAME_PROBLEM_CHANCE:
-			_part_states[part.order.order_id] = SlotState.AWAITING_INSPECTION
-			held_part = part
-			_refresh_aggregate_state()
-			_set_status("Revision")
-			_set_platform_color(Color(0.62, 0.28, 0.55))
-			_emit_status()
-			var claims: Array = _build_inspection_claims()
-			GameManager.enter_problem_inspection(part, claims)
-			return
-		_finish_microscope_part(part)
+		_part_states[part.order.order_id] = SlotState.AWAITING_INSPECTION
+		held_part = part
+		_refresh_aggregate_state()
+		_set_status("Analyze")
+		_set_platform_color(Color(0.24, 0.48, 0.62))
+		_emit_status()
+		GameManager.start_microscope_session(part)
 		return
 	part.advance_step_after_station(station_kind)
 	_part_states[part.order.order_id] = SlotState.READY

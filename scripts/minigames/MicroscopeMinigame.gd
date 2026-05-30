@@ -44,7 +44,8 @@ func _ready() -> void:
 	visible = false
 	process_mode = Node.PROCESS_MODE_DISABLED
 	_results_panel.visible = false
-	GameManager.microscope_minigame_requested.connect(_on_minigame_requested)
+	if GameManager.has_signal("microscope_minigame_requested"):
+		GameManager.connect("microscope_minigame_requested", _on_minigame_requested)
 	_cache_buttons()
 	_apply_touch_sizes()
 

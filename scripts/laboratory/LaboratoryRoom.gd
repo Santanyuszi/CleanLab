@@ -144,6 +144,26 @@ func _on_station_button_pressed(station: WorkStation) -> void:
 		controller.call("_handle_tap", station.global_position)
 
 
+func flash_station_warning(device_key: String) -> void:
+	var button := get_node_or_null(NodePath(STATION_BUTTONS.get(device_key, &""))) as TextureButton
+	var overlay := get_node_or_null(NodePath(DEVICE_OVERLAY_NODES.get(device_key, &""))) as TextureRect
+	if button == null or overlay == null:
+		return
+	_stop_button_tween(device_key)
+	button.modulate = Color(1.0, 0.28, 0.08, 0.5)
+	overlay.modulate = Color(1.0, 0.5, 0.28, 1.0)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(button, "modulate:a", 0.08, 0.18)
+	tween.tween_property(overlay, "modulate", STATION_OVERLAY_IDLE, 0.18)
+	tween.chain().set_parallel(true)
+	tween.tween_property(button, "modulate:a", 0.5, 0.18)
+	tween.tween_property(overlay, "modulate", Color(1.0, 0.5, 0.28, 1.0), 0.18)
+	tween.chain().set_parallel(true)
+	tween.tween_property(button, "modulate:a", 0.0, 0.22)
+	tween.tween_property(overlay, "modulate", STATION_OVERLAY_IDLE, 0.22)
+
+
 func _on_station_status(device_key: String, status: String, _progress: float, _time_left: float) -> void:
 	var button := get_node_or_null(NodePath(STATION_BUTTONS.get(device_key, &""))) as TextureButton
 	var overlay := get_node_or_null(NodePath(DEVICE_OVERLAY_NODES.get(device_key, &""))) as TextureRect

@@ -463,54 +463,46 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Non-metal (N)"
 
-[node name="ClassBtn3" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow"]
+[node name="ClassRow2" type="HBoxContainer" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ClassBtn3" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow2"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Ignore (I)"
 
-[node name="ClassBtn4" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow"]
+[node name="ClassBtn4" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow2"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "SEM/FTIR (S)"
 
 [node name="BottomNav" type="PanelContainer" parent="VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 76)
+custom_minimum_size = Vector2(0, 84)
 
 [node name="NavHBox" type="HBoxContainer" parent="VBox/BottomNav"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 alignment = 1
 
 [node name="LabTab" type="Button" parent="VBox/BottomNav/NavHBox"]
 layout_mode = 2
 size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 72)
 theme_override_font_sizes/font_size = 14
 text = "LAB"
-
-[node name="SamplesTab" type="Button" parent="VBox/BottomNav/NavHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "SAMPLES"
-
-[node name="StaffTab" type="Button" parent="VBox/BottomNav/NavHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "STAFF"
-
-[node name="UpgradesTab" type="Button" parent="VBox/BottomNav/NavHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "UPGRADES"
 
 [node name="ReportsTab" type="Button" parent="VBox/BottomNav/NavHBox"]
 layout_mode = 2
 size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 72)
 text = "REPORTS"
 
-[node name="EscalationsTab" type="Button" parent="VBox/BottomNav/NavHBox"]
+[node name="ShopTab" type="Button" parent="VBox/BottomNav/NavHBox"]
 layout_mode = 2
 size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 72)
 text = "SHOP"
 
 [node name="ProblemInspectionPopup" parent="." instance=ExtResource("10_popup")]

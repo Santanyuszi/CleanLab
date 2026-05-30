@@ -7,14 +7,14 @@ enum GameLayer {
 	PROBLEM_INSPECTION,
 }
 
-const MINIGAME_PROBLEM_CHANCE: float = 0.35
+const MINIGAME_PROBLEM_CHANCE: float = 0.0
 
 var game_layer: GameLayer = GameLayer.LAB
-var player_money: int = 450
+var player_money: int = 220
 var player_xp: int = 0
-var player_xp_to_next: int = 500
+var player_xp_to_next: int = 140
 var player_level: int = 1
-var lab_reputation: float = 55.0
+var lab_reputation: float = 60.0
 var contamination_trend: float = 0.35
 var escalation_risk: float = 0.45
 var alert_count: int = 0
@@ -39,6 +39,17 @@ const CONTRACT_OFFER_MIN_COUNT := 1
 const CONTRACT_OFFER_MAX_COUNT := 2
 const CONTRACT_OFFER_MIN_SECONDS := 55
 const CONTRACT_OFFER_MAX_SECONDS := 130
+const REPORT_XP_BY_TIER := {
+	1: 70,
+	2: 120,
+	3: 190,
+	4: 300,
+}
+const XP_TO_NEXT_BY_LEVEL := {
+	1: 140,
+	2: 210,
+	3: 300,
+}
 const CONTRACT_CATALOG: Array[Dictionary] = [
 	{
 		"id": "door_lock_actuator",
@@ -227,7 +238,7 @@ const DEVICE_CATALOG: Dictionary = {
 		"kind": "Extraction machine",
 		"max_level": 4,
 		"purchase_cost": 0,
-		"upgrade_costs": [0, 1200, 2800, 5200],
+		"upgrade_costs": [0, 260, 700, 1500],
 		"level_requirements": [1, 2, 4, 7],
 	},
 	"drying": {
@@ -235,7 +246,7 @@ const DEVICE_CATALOG: Dictionary = {
 		"kind": "Drying oven",
 		"max_level": 4,
 		"purchase_cost": 0,
-		"upgrade_costs": [0, 900, 2100, 4400],
+		"upgrade_costs": [0, 220, 620, 1350],
 		"level_requirements": [1, 2, 4, 7],
 	},
 	"microscope": {
@@ -243,7 +254,7 @@ const DEVICE_CATALOG: Dictionary = {
 		"kind": "Microscope",
 		"max_level": 4,
 		"purchase_cost": 0,
-		"upgrade_costs": [0, 1600, 3600, 6800],
+		"upgrade_costs": [0, 320, 850, 1800],
 		"level_requirements": [1, 3, 5, 8],
 	},
 	"truck": {
@@ -251,7 +262,7 @@ const DEVICE_CATALOG: Dictionary = {
 		"kind": "Shipping",
 		"max_level": 10,
 		"purchase_cost": 0,
-		"upgrade_costs": [0, 350, 700, 1200, 1800, 2600, 3600, 4800, 6200, 8000],
+		"upgrade_costs": [0, 160, 360, 650, 1050, 1600, 2350, 3350, 4650, 6300],
 		"level_requirements": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 	},
 }
@@ -291,11 +302,11 @@ func start_run() -> void:
 	staged_reports.clear()
 	contract_offers.clear()
 	samples_in_lab = 0
-	player_money = 450
+	player_money = 220
 	player_xp = 0
-	player_xp_to_next = 500
+	player_xp_to_next = _xp_required_for_next_level(1)
 	player_level = 1
-	lab_reputation = 55.0
+	lab_reputation = 60.0
 	alert_count = 0
 	game_day = 1
 	game_minutes = 480
@@ -433,18 +444,39 @@ func get_offer_seconds_left(offer: Dictionary) -> int:
 
 func _build_contract_offer(contract: Dictionary) -> Dictionary:
 	var offer := contract.duplicate(true)
-	var required_reputation := float(offer.get("satisfaction_required", 35.0))
 	var tier := int(offer.get("tier", 1))
 	var cost := int(offer.get("manufacture_cost", 0))
-	var batch_size := randi_range(1, mini(get_manufacturing_buffer_capacity(), tier + 1))
-	var margin_multiplier := randf_range(0.9, 1.25)
-	var margin := maxi(roundi(required_reputation * tier * margin_multiplier), 10)
+	var batch_size := _roll_offer_batch_size(tier)
+	var margin := _roll_offer_margin(tier)
+	if tier == 1:
+		var safe_requirement := maxf(CONTRACT_BREAK_SATISFACTION, lab_reputation - 2.0)
+		offer["satisfaction_required"] = minf(float(offer.get("satisfaction_required", 35.0)), safe_requirement)
 	offer["offer_id"] = "OFFER-%d-%03d" % [Time.get_ticks_msec(), randi_range(1, 999)]
 	offer["batch_size"] = batch_size
 	offer["margin"] = margin
 	offer["sell_price"] = cost + margin
 	offer["expires_at_msec"] = Time.get_ticks_msec() + randi_range(CONTRACT_OFFER_MIN_SECONDS, CONTRACT_OFFER_MAX_SECONDS) * 1000
 	return offer
+
+
+func _roll_offer_batch_size(tier: int) -> int:
+	var max_batch := mini(get_manufacturing_buffer_capacity(), tier + 1)
+	if tier == 1:
+		return 2 if randf() < 0.25 and max_batch >= 2 else 1
+	return randi_range(1, max_batch)
+
+
+func _roll_offer_margin(tier: int) -> int:
+	match tier:
+		1:
+			return randi_range(55, 85)
+		2:
+			return randi_range(90, 140)
+		3:
+			return randi_range(150, 230)
+		4:
+			return randi_range(250, 380)
+	return randi_range(45, 75)
 
 
 func _is_lower_margin_contract(a: Dictionary, b: Dictionary) -> bool:
@@ -454,9 +486,9 @@ func _is_lower_margin_contract(a: Dictionary, b: Dictionary) -> bool:
 
 
 func get_contract_tier() -> int:
-	if player_level < 4:
+	if player_level < 3:
 		return 1
-	if player_level < 8:
+	if player_level < 7:
 		return 2
 	if player_level < 12:
 		return 3
@@ -629,6 +661,7 @@ func stage_report_for_shipping(part: Part) -> bool:
 	staged_reports.append({
 		"name": part.order.order_id,
 		"payout": part.order.payout,
+		"tier": part.order.tier,
 		"satisfaction_required": part.order.satisfaction_required,
 	})
 	unregister_part(part.order.order_id)
@@ -658,8 +691,9 @@ func send_truck() -> int:
 	if staged_reports.is_empty():
 		return 0
 	var payout := get_staged_report_total()
+	var delivered_reports := staged_reports.duplicate(true)
 	staged_reports.clear()
-	complete_delivery(payout)
+	complete_delivery(payout, delivered_reports)
 	shipping_changed.emit()
 	return payout
 
@@ -687,9 +721,9 @@ func resolve_problem_inspection(part: Part, approved: bool) -> void:
 	problem_inspection_resolved.emit(part, approved)
 
 
-func complete_delivery(payout: int) -> void:
+func complete_delivery(payout: int, delivered_reports: Array = []) -> void:
 	player_money += payout
-	player_xp += floori(payout / 5.0)
+	player_xp += _delivery_xp_for_reports(delivered_reports, payout)
 	_apply_level_progress()
 	lab_reputation = clampf(lab_reputation + 3.0, 0.0, 100.0)
 	game_minutes += 3
@@ -697,6 +731,16 @@ func complete_delivery(payout: int) -> void:
 	economy_changed.emit()
 	sample_queue_changed.emit()
 	delivery_completed.emit(payout)
+
+
+func _delivery_xp_for_reports(delivered_reports: Array, payout: int) -> int:
+	if delivered_reports.is_empty():
+		return maxi(floori(float(payout) / 6.0), REPORT_XP_BY_TIER[1])
+	var xp := 0
+	for report in delivered_reports:
+		var tier := int(report.get("tier", 1))
+		xp += int(REPORT_XP_BY_TIER.get(tier, REPORT_XP_BY_TIER[1]))
+	return xp
 
 
 func _check_contract_breaks() -> void:
@@ -714,11 +758,21 @@ func _apply_level_progress() -> void:
 	while player_xp >= player_xp_to_next:
 		player_xp -= player_xp_to_next
 		player_level += 1
-		player_xp_to_next = floori(float(player_xp_to_next) * 1.35)
+		player_xp_to_next = _xp_required_for_next_level(player_level)
+
+
+func _xp_required_for_next_level(level: int) -> int:
+	if XP_TO_NEXT_BY_LEVEL.has(level):
+		return int(XP_TO_NEXT_BY_LEVEL[level])
+	var xp := int(XP_TO_NEXT_BY_LEVEL[3])
+	for _i in range(4, level + 1):
+		xp = floori(float(xp) * 1.32)
+	return xp
 
 
 func apply_inspection_penalty() -> void:
-	lab_reputation = clampf(lab_reputation - 5.0, 0.0, 100.0)
+	var penalty := 2.0 if player_level < 4 else 5.0
+	lab_reputation = clampf(lab_reputation - penalty, 0.0, 100.0)
 	alert_count += 1
 	economy_changed.emit()
 
@@ -727,9 +781,9 @@ func apply_microscopy_results(summary: Dictionary) -> void:
 	var score: int = int(summary.get("score", 0))
 	var accuracy: float = float(summary.get("accuracy", 0.0))
 	var wrong: int = int(summary.get("wrong", 0))
-	player_xp += floori(score / 8.0) + int(accuracy * 20.0)
-	player_money += floori(score / 4.0)
-	lab_reputation = clampf(lab_reputation + (accuracy - 0.5) * 6.0 - wrong, 0.0, 100.0)
+	player_xp += mini(floori(float(score) / 20.0) + int(accuracy * 8.0), 12)
+	player_money += mini(floori(float(score) / 10.0), 12)
+	lab_reputation = clampf(lab_reputation + (accuracy - 0.5) * 3.0 - float(wrong) * 0.5, 0.0, 100.0)
 	_apply_level_progress()
 	_check_contract_breaks()
 	game_layer = GameLayer.LAB

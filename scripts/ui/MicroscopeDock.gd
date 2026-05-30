@@ -27,9 +27,12 @@ func _ready() -> void:
 	visible = false
 	GameManager.microscope_session_started.connect(_on_session_started)
 	for i in 5:
-		var btn: Button = get_node("Margin/VBox/Bottom/ClassRow/ClassBtn%d" % i)
+		var btn := find_child("ClassBtn%d" % i, true, false) as Button
+		if btn == null:
+			continue
 		btn.pressed.connect(_on_class_pressed.bind(i))
-		btn.custom_minimum_size = Vector2(0, 72)
+		btn.custom_minimum_size = Vector2(0, 64)
+		btn.add_theme_font_size_override("font_size", 14)
 
 
 func set_active(on: bool) -> void:

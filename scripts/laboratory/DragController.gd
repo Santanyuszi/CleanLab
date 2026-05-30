@@ -47,16 +47,20 @@ func _handle_tap(world: Vector2) -> void:
 	if ready_station:
 		var ready_part := ready_station.get_ready_part_at(world)
 		if ready_part and ready_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_report():
+			_flash_station_warning(ready_station.device_key)
 			_hint("Truck is full. Send it before the microscope can release more reports.")
 			return
-		_route_part(ready_station.pick_up())
+		_play_claim_sfx()
+		_route_part(ready_station.pick_up(), true)
 		return
 	var station: WorkStation = _station_at(world)
 	if station and station.can_pick_up():
 		if station.station_kind == WorkStation.Kind.MICROSCOPE and station.held_part and station.held_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_report():
+			_flash_station_warning(station.device_key)
 			_hint("Truck is full. Send it before the microscope can release more reports.")
 			return
-		_route_part(station.pick_up())
+		_play_claim_sfx()
+		_route_part(station.pick_up(), true)
 		return
 	if station and station.held_part != null:
 		_hint("Processing at %s." % station.station_title)
@@ -88,7 +92,7 @@ func _part_at(world: Vector2) -> Part:
 	return null
 
 
-func _route_part(part: Part) -> void:
+func _route_part(part: Part, already_claimed: bool = false) -> void:
 	if part == null:
 		return
 	if part.current_step == Part.Step.REPORT_READY:
@@ -99,10 +103,13 @@ func _route_part(part: Part) -> void:
 		_hint("Next station is not available.")
 		return
 	if not station.can_accept_part(part):
+		_flash_station_warning(station.device_key)
 		_hint("%s is not ready." % station.station_title)
 		return
 	var from_pos := part.global_position
 	if station.try_accept_part(part):
+		if not already_claimed:
+			_play_claim_sfx()
 		part.global_position = from_pos
 		_tween_part_to(part, station.get_slot_global_position())
 		_hint("%s started." % station.station_title)
@@ -135,6 +142,7 @@ func _tween_part_to(part: Part, target: Vector2) -> void:
 
 func _stage_report(part: Part) -> void:
 	if GameManager.stage_report_for_shipping(part):
+		_play_claim_sfx()
 		_tween_part_to(part, Vector2(1238, 508))
 		await get_tree().create_timer(0.24).timeout
 		if is_instance_valid(part):
@@ -157,3 +165,13 @@ func _station_at(world: Vector2) -> WorkStation:
 func _hint(text: String) -> void:
 	if _shell:
 		_shell.set_hint(text)
+
+
+func _flash_station_warning(device_key: String) -> void:
+	if _lab and _lab.has_method("flash_station_warning"):
+		_lab.call("flash_station_warning", device_key)
+
+
+func _play_claim_sfx() -> void:
+	if _shell and _shell.has_method("play_claim_sfx"):
+		_shell.play_claim_sfx()
