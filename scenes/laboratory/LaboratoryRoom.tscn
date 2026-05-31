@@ -24,115 +24,115 @@ script = ExtResource("1_lab")
 part_scene = ExtResource("3_part")
 
 [node name="WhiteBackground" type="ColorRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 color = Color(1, 1, 1, 1)
 
 [node name="LabArt" type="ColorRect" parent="."]
 visible = false
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 color = Color(0.14, 0.17, 0.22, 1)
 
 [node name="LabBackground" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("8_bg")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="DesignOverlay1" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("9_design1")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="DesignOverlay2" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("10_design2")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="DesignOverlay3" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("11_design3")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="DesignOverlay4" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("12_design4")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="DesignOverlay5" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("13_design5")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="MachineRoomDoorOverlay" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("18_machinedoor")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="ExtractionOverlay" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("14_extraction")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="OvenOverlay" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("15_oven")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="MicroscopeOverlay" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("16_microscope")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="EntryRoomDoorOverlay" type="TextureRect" parent="."]
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("17_entrydoor")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
 
 [node name="StationButtons" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
-offset_right = 1600.0
-offset_bottom = 720.0
+offset_right = 1508.0
+offset_bottom = 1043.0
 mouse_filter = 2
 
 [node name="ExtractionButton" type="TextureButton" parent="StationButtons"]
-position = Vector2(206, 272)
+position = Vector2(194, 438)
 scale = Vector2(2.35, 2.35)
 mouse_filter = 1
 texture_normal = ExtResource("14_extraction")
@@ -140,7 +140,7 @@ ignore_texture_size = true
 stretch_mode = 0
 
 [node name="OvenButton" type="TextureButton" parent="StationButtons"]
-position = Vector2(394, 278)
+position = Vector2(371, 444)
 scale = Vector2(2.35, 2.35)
 mouse_filter = 1
 texture_normal = ExtResource("15_oven")
@@ -148,7 +148,7 @@ ignore_texture_size = true
 stretch_mode = 0
 
 [node name="MicroscopeButton" type="TextureButton" parent="StationButtons"]
-position = Vector2(612, 302)
+position = Vector2(577, 467)
 scale = Vector2(2.35, 2.35)
 mouse_filter = 1
 texture_normal = ExtResource("16_microscope")
@@ -397,7 +397,7 @@ horizontal_alignment = 1
 
 [node name="IncomingPad" type="Marker2D" parent="."]
 unique_name_in_owner = true
-position = Vector2(1238, 390)
+position = Vector2(1281, 594)
 
 [node name="IncomingLabel" type="Label" parent="."]
 visible = false
@@ -413,17 +413,17 @@ horizontal_alignment = 1
 [node name="Stations" type="Node2D" parent="."]
 
 [node name="ExtractionCabinet" parent="Stations" instance=ExtResource("4_ext")]
-position = Vector2(275, 405)
+position = Vector2(259, 564)
 
 [node name="DryingOven" parent="Stations" instance=ExtResource("5_dry")]
-position = Vector2(465, 330)
+position = Vector2(438, 493)
 
 [node name="MicroscopeStation" parent="Stations" instance=ExtResource("6_micro")]
 unique_name_in_owner = true
-position = Vector2(730, 360)
+position = Vector2(688, 522)
 
 [node name="TruckDock" parent="Stations" instance=ExtResource("7_truck")]
-position = Vector2(1238, 390)
+position = Vector2(1167, 550)
 
 [node name="TruckLabel" type="Label" parent="."]
 visible = false

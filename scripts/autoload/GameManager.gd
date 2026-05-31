@@ -266,6 +266,34 @@ const DEVICE_CATALOG: Dictionary = {
 		"level_requirements": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 	},
 }
+const PERSONNEL_CATALOG: Dictionary = {
+	"labor_worker": {
+		"title": "Labor Worker",
+		"kind": "Personnel",
+		"max_level": 3,
+		"upgrade_costs": [180, 520, 1100],
+		"employ_cost": 95,
+		"level_requirements": [2, 4, 7],
+		"phase_text": [
+			"Routes incoming samples to extraction",
+			"Moves extracted samples to drying oven",
+			"Moves dried samples to microscope analysis",
+		],
+	},
+	"lab_manager": {
+		"title": "Lab Manager",
+		"kind": "Personnel",
+		"max_level": 3,
+		"upgrade_costs": [420, 900, 1750],
+		"employ_cost": 180,
+		"level_requirements": [3, 5, 8],
+		"phase_text": [
+			"Accepts suitable contracts automatically",
+			"Supervises entry-to-extraction routing",
+			"Sends trucks automatically when reports are ready",
+		],
+	},
+}
 
 var device_levels: Dictionary = {
 	"extraction": 1,
@@ -282,11 +310,20 @@ var device_owned: Dictionary = {
 	"microscope": true,
 	"truck": true,
 }
+var personnel_levels: Dictionary = {
+	"labor_worker": 0,
+	"lab_manager": 0,
+}
+var personnel_employed: Dictionary = {
+	"labor_worker": false,
+	"lab_manager": false,
+}
 
 signal layer_changed(layer: GameLayer)
 signal economy_changed
 signal sample_queue_changed
 signal device_changed(device_key: String)
+signal personnel_changed(personnel_key: String)
 signal problem_inspection_requested(part: Part, claims: Array)
 signal problem_inspection_resolved(part: Part, approved: bool)
 signal microscope_session_started(part: Part)
@@ -328,6 +365,14 @@ func start_run() -> void:
 		"microscope": true,
 		"truck": true,
 	}
+	personnel_levels = {
+		"labor_worker": 0,
+		"lab_manager": 0,
+	}
+	personnel_employed = {
+		"labor_worker": false,
+		"lab_manager": false,
+	}
 	layer_changed.emit(game_layer)
 	economy_changed.emit()
 	sample_queue_changed.emit()
@@ -362,6 +407,95 @@ func is_device_unlocked(device_key: String, required_level: int) -> bool:
 
 func get_device_catalog() -> Dictionary:
 	return DEVICE_CATALOG.duplicate(true)
+
+
+func get_personnel_catalog() -> Dictionary:
+	return PERSONNEL_CATALOG.duplicate(true)
+
+
+func get_personnel_level(personnel_key: String) -> int:
+	return int(personnel_levels.get(personnel_key, 0))
+
+
+func is_personnel_employed(personnel_key: String) -> bool:
+	return bool(personnel_employed.get(personnel_key, false))
+
+
+func get_personnel_max_level(personnel_key: String) -> int:
+	var data: Dictionary = PERSONNEL_CATALOG.get(personnel_key, {})
+	return int(data.get("max_level", 3))
+
+
+func get_personnel_upgrade_cost(personnel_key: String) -> int:
+	var level := get_personnel_level(personnel_key)
+	if level >= get_personnel_max_level(personnel_key):
+		return 0
+	var data: Dictionary = PERSONNEL_CATALOG.get(personnel_key, {})
+	var costs: Array = data.get("upgrade_costs", [])
+	if level >= costs.size():
+		return 0
+	return int(costs[level])
+
+
+func get_personnel_upgrade_required_player_level(personnel_key: String) -> int:
+	var level := get_personnel_level(personnel_key)
+	var data: Dictionary = PERSONNEL_CATALOG.get(personnel_key, {})
+	var requirements: Array = data.get("level_requirements", [])
+	if level >= requirements.size():
+		return level + 2
+	return int(requirements[level])
+
+
+func get_personnel_employ_cost(personnel_key: String) -> int:
+	var data: Dictionary = PERSONNEL_CATALOG.get(personnel_key, {})
+	return int(data.get("employ_cost", 0))
+
+
+func can_upgrade_personnel_by_level(personnel_key: String) -> bool:
+	return player_level >= get_personnel_upgrade_required_player_level(personnel_key)
+
+
+func upgrade_personnel(personnel_key: String) -> bool:
+	if not PERSONNEL_CATALOG.has(personnel_key):
+		return false
+	var level := get_personnel_level(personnel_key)
+	if level >= get_personnel_max_level(personnel_key):
+		return false
+	if not can_upgrade_personnel_by_level(personnel_key):
+		return false
+	var cost := get_personnel_upgrade_cost(personnel_key)
+	if player_money < cost:
+		return false
+	player_money -= cost
+	personnel_levels[personnel_key] = level + 1
+	economy_changed.emit()
+	personnel_changed.emit(personnel_key)
+	return true
+
+
+func employ_personnel(personnel_key: String) -> bool:
+	if not PERSONNEL_CATALOG.has(personnel_key):
+		return false
+	if is_personnel_employed(personnel_key):
+		return false
+	if get_personnel_level(personnel_key) <= 0:
+		return false
+	var cost := get_personnel_employ_cost(personnel_key)
+	if player_money < cost:
+		return false
+	player_money -= cost
+	personnel_employed[personnel_key] = true
+	economy_changed.emit()
+	personnel_changed.emit(personnel_key)
+	return true
+
+
+func fire_personnel(personnel_key: String) -> bool:
+	if not is_personnel_employed(personnel_key):
+		return false
+	personnel_employed[personnel_key] = false
+	personnel_changed.emit(personnel_key)
+	return true
 
 
 func get_device_max_level(device_key: String) -> int:
@@ -538,6 +672,7 @@ func create_order_from_contract(contract: Dictionary) -> PartOrder:
 	order.order_id = "CTR-%03d" % randi_range(1, 999)
 	order.part_name = str(contract.get("name", "Contract Part"))
 	order.contract_id = str(contract.get("id", "contract_part"))
+	order.thumbnail_path = str(contract.get("thumbnail", ""))
 	order.tier = int(contract.get("tier", 1))
 	order.payout = int(contract.get("sell_price", 120))
 	order.manufacture_cost = int(contract.get("manufacture_cost", 40))

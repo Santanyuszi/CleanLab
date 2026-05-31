@@ -5,6 +5,7 @@ extends Resource
 @export var order_id: String = "ORD-001"
 @export var contract_id: String = ""
 @export var part_name: String = "Sample Part"
+@export var thumbnail_path: String = ""
 @export var tier: int = 1
 @export var payout: int = 120
 @export var manufacture_cost: int = 40

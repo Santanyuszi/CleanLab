@@ -17,13 +17,17 @@ const TEXT_DIM := MID_TEAL
 const MINT_WASH := Color(0.949, 0.976, 0.973, 0.88)
 const MUSIC_LOOP_PATH := "res://assets/audio/855613__noisera__nostalgic-retro-game-music-loop.mp3"
 const CLAIM_SFX_PATH := "res://assets/audio/467951__benzix2__ui-button-click.ogg"
+const TRUCK_BUTTON_PATH := "res://assets/ui/CleanLab_TruckButton.png"
 const AUDIO_BUS_MUSIC := "Music"
 const AUDIO_BUS_SFX := "SFX"
 const TOUCH_TARGET := 56.0
 const MOBILE_SIDE_MARGIN := 24.0
+const SHOP_CARD_SIZE := Vector2(250, 376)
+const SHOP_THUMBNAIL_PANEL_HEIGHT := 170.0
 const CONTRACT_POPUP_MAX_SIZE := Vector2(1180, 820)
 const SHOP_POPUP_MAX_SIZE := Vector2(900, 820)
-const ACHIEVEMENT_POPUP_MAX_SIZE := Vector2(1040, 720)
+const ACHIEVEMENT_POPUP_MAX_SIZE := Vector2(1320, 720)
+const MICROSCOPE_POPUP_MAX_SIZE := Vector2(920, 560)
 const ACHIEVEMENT_BADGE_ATLAS_PATH := "res://assets/achievements/Achievements.png"
 const TABLER_ICON_PATH := "res://assets/icons/tabler/%s.svg"
 const ACHIEVEMENT_BADGE_REGIONS := {
@@ -39,21 +43,27 @@ const SHOP_DEVICE_IMAGES := {
 	"microscope": "res://assets/shop/microscope_thumbnail.png",
 	"truck": "res://assets/ui/ImageDataSet_CleanLab_Truck.png",
 }
+const SHOP_PERSONNEL_IMAGES := {
+	"labor_worker": "res://assets/shop/lab_worker_thumbnail.png",
+	"lab_manager": "res://assets/shop/lab_manager_thumbnail.png",
+}
 
 @onready var _header: HeaderBar = %StatusBar
 @onready var _sidebar: StationSidebar = %StationSidebar
 @onready var _sample_queue: SampleQueuePanel = %SampleQueuePanel
 @onready var _microscope_dock: MicroscopeDock = %MicroscopeDock
 @onready var _lab_viewport: SubViewport = %LabViewport
+@onready var _bottom_row: HBoxContainer = $VBox/BottomRow
 
 var _shipping_status: Label = null
 var _shipping_payout: Label = null
-var _send_truck_button: Button = null
+var _send_truck_button: BaseButton = null
 var _contracts_status: Label = null
 var _active_contracts_list: VBoxContainer = null
 var _contracts_popup: PanelContainer = null
 var _contracts_sections: VBoxContainer = null
 var _shop_panel: PanelContainer = null
+var _shop_grid: GridContainer = null
 var _shop_rows: Dictionary = {}
 var _offer_refresh_accumulator: float = 0.0
 var _music_player: AudioStreamPlayer = null
@@ -69,6 +79,7 @@ var _achievement_unread_badge: Label = null
 var _achievements_panel: PanelContainer = null
 var _achievements_grid: GridContainer = null
 var _achievements_summary: Label = null
+var _achievements_scroll: ScrollContainer = null
 var _menu_button: Button = null
 var _menu_panel: PanelContainer = null
 var _music_muted: bool = false
@@ -80,8 +91,12 @@ var _contract_add_tween: Tween = null
 
 func _ready() -> void:
 	add_to_group("lab_shell")
+	_sample_queue.visible = false
+	_bottom_row.visible = false
+	call_deferred("_remove_right_panel_from_layout")
 	resized.connect(_layout_mobile_shell)
 	_apply_reference_skin()
+	_promote_microscope_dock_to_popup()
 	_ensure_audio_buses()
 	_add_music_loop()
 	_add_sfx_player()
@@ -89,7 +104,6 @@ func _ready() -> void:
 	_add_main_menu()
 	_add_achievement_button()
 	_add_audio_buttons()
-	_add_shipping_panel()
 	_add_contract_picker_popup()
 	_add_device_shop_panel()
 	_add_achievements_panel()
@@ -100,6 +114,7 @@ func _ready() -> void:
 	GameManager.sample_queue_changed.connect(_refresh_contracts)
 	GameManager.contract_offers_changed.connect(_refresh_contracts)
 	GameManager.device_changed.connect(_on_device_changed)
+	GameManager.personnel_changed.connect(_on_personnel_changed)
 	GameManager.device_changed.connect(func(_key: String) -> void: _refresh_shipping())
 	GameManager.shipping_changed.connect(_refresh_shipping)
 	GameManager.layer_changed.connect(_on_layer_changed)
@@ -115,7 +130,7 @@ func _ready() -> void:
 	_refresh_achievements()
 	_refresh_achievement_button()
 	_on_layer_changed(GameManager.game_layer)
-	set_hint("Open Contracts (+) to accept your first job.")
+	set_hint("Open Menu > Contracts to accept your first job.")
 	call_deferred("_layout_mobile_shell")
 
 
@@ -246,6 +261,7 @@ func _add_main_menu() -> void:
 	margin.add_child(vbox)
 
 	vbox.add_child(_build_menu_action("LAB", "building-factory", _on_menu_lab_pressed))
+	vbox.add_child(_build_menu_action("CONTRACTS", "clipboard-list", _on_menu_contracts_pressed))
 	vbox.add_child(_build_menu_action("REPORTS", "report-analytics", _on_menu_reports_pressed))
 	vbox.add_child(_build_menu_action("SHOP", "shopping-cart", _on_menu_shop_pressed))
 	vbox.add_child(_build_menu_action("ACHIEVEMENTS", "award", _on_menu_achievements_pressed))
@@ -277,7 +293,7 @@ func _layout_main_menu() -> void:
 		var viewport_size := get_viewport_rect().size
 		var panel_size := Vector2(
 			minf(360.0, maxf(viewport_size.x - MOBILE_SIDE_MARGIN * 2.0, 300.0)),
-			minf(432.0, maxf(viewport_size.y - MOBILE_SIDE_MARGIN * 2.0, 300.0))
+			minf(500.0, maxf(viewport_size.y - MOBILE_SIDE_MARGIN * 2.0, 300.0))
 		)
 		_menu_panel.size = panel_size
 		_menu_panel.position = ((viewport_size - panel_size) * 0.5).floor()
@@ -300,6 +316,12 @@ func _close_main_menu() -> void:
 func _on_menu_lab_pressed() -> void:
 	_close_main_menu()
 	set_hint("Lab view ready.")
+
+
+func _on_menu_contracts_pressed() -> void:
+	_close_main_menu()
+	if _contracts_popup != null and not _contracts_popup.visible:
+		_toggle_contract_picker()
 
 
 func _on_menu_reports_pressed() -> void:
@@ -553,7 +575,8 @@ func get_lab_root() -> Node2D:
 
 
 func set_hint(text: String) -> void:
-	_sample_queue.set_status_line(text)
+	if _sample_queue:
+		_sample_queue.set_status_line(text)
 
 
 func _layout_mobile_shell() -> void:
@@ -562,8 +585,10 @@ func _layout_mobile_shell() -> void:
 	_layout_popup(_contracts_popup, CONTRACT_POPUP_MAX_SIZE)
 	_layout_popup(_shop_panel, SHOP_POPUP_MAX_SIZE)
 	_layout_achievements_popup()
+	_layout_microscope_popup()
 	_refresh_contract_grid_columns()
 	_refresh_achievement_grid_columns()
+	_refresh_shop_grid_columns()
 
 
 func _layout_header() -> void:
@@ -608,20 +633,78 @@ func _layout_achievements_popup() -> void:
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		return
-	var top_margin := maxf(MOBILE_SIDE_MARGIN, 18.0)
-	var bottom_margin := MOBILE_SIDE_MARGIN
+	var edge_margin := maxf(MOBILE_SIDE_MARGIN, 18.0)
+	var safe_top := edge_margin
+	var safe_bottom := viewport_size.y - edge_margin
+	var header_bar := get_node_or_null("VBox/HeaderBar") as PanelContainer
+	if header_bar:
+		var header_bottom := header_bar.global_position.y + header_bar.size.y
+		if header_bottom > 0.0:
+			safe_top = maxf(safe_top, header_bottom + edge_margin)
 	var status_bar := get_node_or_null("VBox/StatusBar") as PanelContainer
 	if status_bar:
-		bottom_margin += maxf(status_bar.size.y, status_bar.custom_minimum_size.y)
+		var status_top := status_bar.global_position.y
+		if status_top > 0.0:
+			safe_bottom = minf(safe_bottom, status_top - edge_margin)
+		else:
+			safe_bottom -= maxf(status_bar.size.y, status_bar.custom_minimum_size.y)
+	var safe_height := safe_bottom - safe_top
+	if safe_height <= 0.0:
+		return
+	var safe_width := maxf(viewport_size.x - edge_margin * 2.0, 300.0)
 	var target_size := Vector2(
-		minf(ACHIEVEMENT_POPUP_MAX_SIZE.x, maxf(viewport_size.x - MOBILE_SIDE_MARGIN * 2.0, 320.0)),
-		minf(ACHIEVEMENT_POPUP_MAX_SIZE.y, maxf(viewport_size.y - top_margin - bottom_margin, 320.0))
+		minf(ACHIEVEMENT_POPUP_MAX_SIZE.x, safe_width),
+		minf(ACHIEVEMENT_POPUP_MAX_SIZE.y, safe_height)
 	)
 	_achievements_panel.position = Vector2(
 		floor((viewport_size.x - target_size.x) * 0.5),
-		floor(top_margin)
+		floor(safe_top + (safe_height - target_size.y) * 0.5)
 	)
 	_achievements_panel.size = target_size
+	if _achievements_scroll:
+		_achievements_scroll.custom_minimum_size = Vector2(0, maxf(target_size.y - 156.0, 160.0))
+
+
+func _deferred_layout_achievements_popup() -> void:
+	await get_tree().process_frame
+	if _achievements_panel == null or not _achievements_panel.visible:
+		return
+	_layout_achievements_popup()
+	_refresh_achievement_grid_columns()
+
+
+func _layout_microscope_popup() -> void:
+	if _microscope_dock == null:
+		return
+	var viewport_size := get_viewport_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	var edge_margin := maxf(MOBILE_SIDE_MARGIN, 18.0)
+	var safe_top := edge_margin
+	var safe_bottom := viewport_size.y - edge_margin
+	var status_bar := get_node_or_null("VBox/StatusBar") as PanelContainer
+	if status_bar:
+		var status_top := status_bar.global_position.y
+		if status_top > 0.0:
+			safe_bottom = minf(safe_bottom, status_top - edge_margin)
+		else:
+			safe_bottom -= maxf(status_bar.size.y, status_bar.custom_minimum_size.y)
+	var safe_height := safe_bottom - safe_top
+	if safe_height <= 0.0:
+		return
+	var target_size := Vector2(
+		minf(MICROSCOPE_POPUP_MAX_SIZE.x, maxf(viewport_size.x - edge_margin * 2.0, 320.0)),
+		minf(MICROSCOPE_POPUP_MAX_SIZE.y, safe_height)
+	)
+	_microscope_dock.position = Vector2(
+		floor((viewport_size.x - target_size.x) * 0.5),
+		floor(safe_top + (safe_height - target_size.y) * 0.5)
+	)
+	_microscope_dock.size = target_size
+
+	var particle_field := _microscope_dock.get_node_or_null("Margin/VBox/ParticleField") as Control
+	if particle_field:
+		particle_field.custom_minimum_size = Vector2(0, maxf(target_size.y - 286.0, 150.0))
 
 
 func _contract_grid_columns() -> int:
@@ -639,9 +722,22 @@ func _achievement_grid_columns() -> int:
 	if _achievements_panel == null:
 		return 2
 	var available_width := _achievements_panel.size.x - 72.0
-	if available_width >= 960.0:
+	if available_width >= 1180.0:
+		return 4
+	if available_width >= 900.0:
 		return 3
 	if available_width >= 620.0:
+		return 2
+	return 1
+
+
+func _shop_grid_columns() -> int:
+	if _shop_panel == null:
+		return 2
+	var available_width := _shop_panel.size.x - 72.0
+	if available_width >= 780.0:
+		return 3
+	if available_width >= 520.0:
 		return 2
 	return 1
 
@@ -659,6 +755,11 @@ func _refresh_contract_grid_columns() -> void:
 func _refresh_achievement_grid_columns() -> void:
 	if _achievements_grid != null:
 		_achievements_grid.columns = _achievement_grid_columns()
+
+
+func _refresh_shop_grid_columns() -> void:
+	if _shop_grid != null:
+		_shop_grid.columns = _shop_grid_columns()
 
 
 func _update_contract_add_highlight() -> void:
@@ -683,7 +784,11 @@ func _refresh_header() -> void:
 
 func _on_layer_changed(layer: GameManager.GameLayer) -> void:
 	var show_dock := layer == GameManager.GameLayer.MICROSCOPY
+	if _bottom_row:
+		_bottom_row.visible = false
 	_microscope_dock.visible = show_dock
+	if show_dock:
+		_layout_microscope_popup()
 	_microscope_dock.set_active(show_dock)
 
 
@@ -708,7 +813,6 @@ func _apply_reference_skin() -> void:
 	if visual_header:
 		_apply_panel_style(visual_header, Color(WHITE, 0.94), PANEL_BORDER, 0, 1)
 	_apply_panel_style(_header, Color(WHITE, 0.94), PANEL_BORDER, 0, 1)
-	_apply_panel_style(_sidebar, PANEL_BG, PANEL_BORDER, 8, 1)
 	_apply_panel_style(_sample_queue, PANEL_BG, PANEL_BORDER, 8, 1)
 	_apply_panel_style(_microscope_dock, PANEL_BG, PANEL_BORDER, 8, 1)
 	var viewport_panel := get_node_or_null("VBox/MiddleRow/LabViewportContainer") as PanelContainer
@@ -732,6 +836,30 @@ func _apply_reference_skin() -> void:
 	_brand_title.position = Vector2(20, 9)
 	_brand_title.size = Vector2(140, 56)
 	add_child(_brand_title)
+
+
+func _remove_right_panel_from_layout() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var middle_row := get_node_or_null("VBox/MiddleRow") as HBoxContainer
+	if middle_row == null or _sidebar == null or _sidebar.get_parent() != middle_row:
+		return
+	middle_row.remove_child(_sidebar)
+	_sidebar.visible = false
+	_sidebar.custom_minimum_size = Vector2.ZERO
+
+
+func _promote_microscope_dock_to_popup() -> void:
+	if _microscope_dock == null or _microscope_dock.get_parent() == self:
+		return
+	var old_parent := _microscope_dock.get_parent()
+	old_parent.remove_child(_microscope_dock)
+	add_child(_microscope_dock)
+	_microscope_dock.z_index = 42
+	_microscope_dock.visible = false
+	_microscope_dock.custom_minimum_size = Vector2(320, 320)
+	_apply_panel_style(_microscope_dock, Color(WHITE, 0.985), PANEL_BORDER, 16, 1)
+	_layout_microscope_popup()
 
 
 func _add_shipping_panel() -> void:
@@ -774,9 +902,6 @@ func _add_shipping_panel() -> void:
 	title.add_theme_color_override("font_color", TEXT_DARK)
 	vbox.add_child(title)
 
-	var truck := _build_truck_visual()
-	vbox.add_child(truck)
-
 	_shipping_status = Label.new()
 	_shipping_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_shipping_status.add_theme_font_size_override("font_size", 16)
@@ -789,11 +914,6 @@ func _add_shipping_panel() -> void:
 	_shipping_payout.add_theme_color_override("font_color", TEXT_DIM)
 	vbox.add_child(_shipping_payout)
 
-	_send_truck_button = Button.new()
-	_send_truck_button.text = "SEND TRUCK"
-	_send_truck_button.custom_minimum_size = Vector2(0, TOUCH_TARGET)
-	_send_truck_button.pressed.connect(_on_send_truck_pressed)
-	vbox.add_child(_send_truck_button)
 	_style_buttons(panel)
 
 
@@ -953,18 +1073,25 @@ func _add_device_shop_panel() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(scroll)
 
-	var rows := VBoxContainer.new()
-	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rows.add_theme_constant_override("separation", 12)
-	scroll.add_child(rows)
+	_shop_grid = GridContainer.new()
+	_shop_grid.columns = _shop_grid_columns()
+	_shop_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_shop_grid.add_theme_constant_override("h_separation", 12)
+	_shop_grid.add_theme_constant_override("v_separation", 12)
+	scroll.add_child(_shop_grid)
 
 	var catalog := GameManager.get_device_catalog()
 	for key in ["extraction", "drying", "microscope", "truck"]:
 		var row := _build_shop_row(key, catalog.get(key, {}))
-		rows.add_child(row)
+		_shop_grid.add_child(row)
+	var personnel_catalog := GameManager.get_personnel_catalog()
+	for key in ["labor_worker", "lab_manager"]:
+		var row := _build_personnel_row(key, personnel_catalog.get(key, {}))
+		_shop_grid.add_child(row)
 
 	_style_buttons(_shop_panel)
 	_layout_popup(_shop_panel, SHOP_POPUP_MAX_SIZE)
+	_refresh_shop_grid_columns()
 
 
 func _add_achievements_panel() -> void:
@@ -1013,18 +1140,18 @@ func _add_achievements_panel() -> void:
 	_achievements_summary.add_theme_color_override("font_color", TEXT_DIM)
 	vbox.add_child(_achievements_summary)
 
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size = Vector2(0, 220)
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(scroll)
+	_achievements_scroll = ScrollContainer.new()
+	_achievements_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_achievements_scroll.custom_minimum_size = Vector2(0, 220)
+	_achievements_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(_achievements_scroll)
 
 	_achievements_grid = GridContainer.new()
 	_achievements_grid.columns = _achievement_grid_columns()
 	_achievements_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_achievements_grid.add_theme_constant_override("h_separation", 12)
 	_achievements_grid.add_theme_constant_override("v_separation", 12)
-	scroll.add_child(_achievements_grid)
+	_achievements_scroll.add_child(_achievements_grid)
 
 	_style_buttons(_achievements_panel)
 	_layout_achievements_popup()
@@ -1038,6 +1165,7 @@ func _toggle_achievements() -> void:
 		AchievementManager.clear_unread()
 		_layout_achievements_popup()
 		_refresh_achievements()
+		_deferred_layout_achievements_popup()
 	_refresh_achievement_button()
 
 
@@ -1468,74 +1596,226 @@ func _tier_color(tier: int) -> Color:
 
 
 func _build_shop_row(device_key: String, data: Dictionary) -> PanelContainer:
-	var row := PanelContainer.new()
-	row.custom_minimum_size = Vector2(0, 148)
-	_apply_panel_style(row, Color(WHITE, 0.96), PANEL_BORDER, 10, 1)
+	var card := PanelContainer.new()
+	card.custom_minimum_size = SHOP_CARD_SIZE
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apply_panel_style(card, Color(WHITE, 0.96), PANEL_BORDER, 8, 1)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 16)
-	margin.add_theme_constant_override("margin_top", 12)
-	margin.add_theme_constant_override("margin_right", 16)
-	margin.add_theme_constant_override("margin_bottom", 12)
-	row.add_child(margin)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	card.add_child(margin)
 
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 16)
-	margin.add_child(hbox)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	margin.add_child(vbox)
 
 	var preview_panel := PanelContainer.new()
-	preview_panel.custom_minimum_size = Vector2(170, 112)
+	preview_panel.custom_minimum_size = Vector2(0, SHOP_THUMBNAIL_PANEL_HEIGHT)
+	preview_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_panel_style(preview_panel, Color(OFF_WHITE, 0.72), Color(SOFT_TEAL, 0.7), 8, 1)
-	hbox.add_child(preview_panel)
+	vbox.add_child(preview_panel)
 
-	var preview := TextureRect.new()
-	preview.custom_minimum_size = Vector2(170, 112)
-	preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	preview.texture = load(str(SHOP_DEVICE_IMAGES.get(device_key, "")))
-	if device_key == "truck":
-		preview.flip_h = true
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var display_size := _shop_device_thumbnail_size(device_key)
+	var preview := _build_shop_thumbnail(
+		str(SHOP_DEVICE_IMAGES.get(device_key, "")),
+		display_size,
+		device_key == "truck",
+		Color(1.18, 1.18, 1.18, 1.0) if device_key == "truck" else Color.WHITE
+	)
 	preview_panel.add_child(preview)
-
-	var copy := VBoxContainer.new()
-	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(copy)
 
 	var title := Label.new()
 	title.text = str(data.get("title", device_key.capitalize()))
 	title.add_theme_font_size_override("font_size", 16)
 	title.add_theme_color_override("font_color", TEXT_DARK)
-	copy.add_child(title)
+	vbox.add_child(title)
 
 	var meta := Label.new()
 	meta.name = "Meta"
+	meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	meta.custom_minimum_size = Vector2(0, 44)
 	meta.add_theme_font_size_override("font_size", 13)
 	meta.add_theme_color_override("font_color", TEXT_DIM)
-	copy.add_child(meta)
+	vbox.add_child(meta)
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(spacer)
 
 	var button := Button.new()
 	button.name = "ActionButton"
-	button.custom_minimum_size = Vector2(150, 56)
+	button.custom_minimum_size = Vector2(0, TOUCH_TARGET)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(_on_shop_action_pressed.bind(device_key))
-	hbox.add_child(button)
+	vbox.add_child(button)
 
 	_shop_rows[device_key] = {
+		"type": "device",
 		"meta": meta,
 		"button": button,
 	}
-	return row
+	return card
 
 
-func _build_truck_visual() -> Control:
-	var truck := TextureRect.new()
-	truck.custom_minimum_size = Vector2(0, 76)
-	truck.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	truck.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	truck.texture = load("res://assets/ui/ImageDataSet_CleanLab_Truck.png")
-	truck.flip_h = true
-	truck.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return truck
+func _build_personnel_row(personnel_key: String, data: Dictionary) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = SHOP_CARD_SIZE
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apply_panel_style(card, Color(WHITE, 0.96), PANEL_BORDER, 8, 1)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	card.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	margin.add_child(vbox)
+
+	var preview_panel := PanelContainer.new()
+	preview_panel.custom_minimum_size = Vector2(0, SHOP_THUMBNAIL_PANEL_HEIGHT)
+	preview_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apply_panel_style(preview_panel, Color(OFF_WHITE, 0.72), Color(SOFT_TEAL, 0.7), 8, 1)
+	vbox.add_child(preview_panel)
+
+	var icon := _build_shop_thumbnail(
+		str(SHOP_PERSONNEL_IMAGES.get(personnel_key, "")),
+		_shop_personnel_thumbnail_size(personnel_key),
+		false,
+		Color.WHITE
+	)
+	preview_panel.add_child(icon)
+
+	var title := Label.new()
+	title.text = str(data.get("title", personnel_key.capitalize()))
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", TEXT_DARK)
+	vbox.add_child(title)
+
+	var meta := Label.new()
+	meta.name = "Meta"
+	meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	meta.custom_minimum_size = Vector2(0, 58)
+	meta.add_theme_font_size_override("font_size", 13)
+	meta.add_theme_color_override("font_color", TEXT_DIM)
+	vbox.add_child(meta)
+
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(spacer)
+
+	var actions := HBoxContainer.new()
+	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_theme_constant_override("separation", 8)
+	vbox.add_child(actions)
+
+	var train_button := Button.new()
+	train_button.name = "TrainButton"
+	train_button.custom_minimum_size = Vector2(0, TOUCH_TARGET)
+	train_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	train_button.pressed.connect(_on_personnel_action_pressed.bind(personnel_key))
+	actions.add_child(train_button)
+
+	var employ_button := Button.new()
+	employ_button.name = "EmployButton"
+	employ_button.custom_minimum_size = Vector2(0, TOUCH_TARGET)
+	employ_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	employ_button.pressed.connect(_on_personnel_employ_pressed.bind(personnel_key))
+	actions.add_child(employ_button)
+
+	_shop_rows[personnel_key] = {
+		"type": "personnel",
+		"meta": meta,
+		"button": train_button,
+		"employ_button": employ_button,
+	}
+	return card
+
+
+func _build_shop_thumbnail(path: String, display_size: Vector2, flip_h: bool, tint: Color) -> CenterContainer:
+	var center := CenterContainer.new()
+	center.custom_minimum_size = Vector2(0, SHOP_THUMBNAIL_PANEL_HEIGHT)
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var texture := TextureRect.new()
+	texture.custom_minimum_size = display_size
+	texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	texture.texture = _texture_from_png(path)
+	texture.flip_h = flip_h
+	texture.modulate = tint
+	texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(texture)
+	return center
+
+
+func _shop_device_thumbnail_size(device_key: String) -> Vector2:
+	match device_key:
+		"extraction":
+			return Vector2(96, 152)
+		"drying":
+			return Vector2(112, 100)
+		"microscope":
+			return Vector2(74, 118)
+		"truck":
+			return Vector2(156, 124)
+	return Vector2(128, 128)
+
+
+func _shop_personnel_thumbnail_size(personnel_key: String) -> Vector2:
+	match personnel_key:
+		"lab_manager":
+			return Vector2(78, 150)
+		"labor_worker":
+			return Vector2(82, 158)
+	return Vector2(82, 158)
+
+
+func _build_truck_button() -> TextureButton:
+	var button := TextureButton.new()
+	button.name = "SendTruckImageButton"
+	button.tooltip_text = "Send truck"
+	button.custom_minimum_size = Vector2(0, 116)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.ignore_texture_size = true
+	button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	var texture := _texture_from_png(TRUCK_BUTTON_PATH)
+	button.texture_normal = texture
+	button.texture_hover = texture
+	button.texture_pressed = texture
+	button.texture_disabled = texture
+	button.texture_click_mask = _make_alpha_click_mask(TRUCK_BUTTON_PATH)
+	button.pressed.connect(_on_send_truck_pressed)
+	return button
+
+
+func _make_alpha_click_mask(path: String) -> BitMap:
+	var image := Image.load_from_file(path)
+	if image == null:
+		return null
+	var mask := BitMap.new()
+	mask.create_from_image_alpha(image, 0.1)
+	return mask
+
+
+func _texture_from_png(path: String) -> Texture2D:
+	if path.is_empty():
+		return null
+	if ResourceLoader.exists(path):
+		var imported_texture := load(path) as Texture2D
+		if imported_texture:
+			return imported_texture
+	var image := Image.load_from_file(path)
+	if image == null:
+		return null
+	return ImageTexture.create_from_image(image)
 
 
 func _apply_panel_style(panel: PanelContainer, bg: Color, border: Color, radius: int, border_width: int) -> void:
@@ -1610,7 +1890,9 @@ func _refresh_shipping() -> void:
 	var count := GameManager.get_staged_report_count()
 	_shipping_status.text = "TRUCK READY\n%d / %d REPORTS" % [count, GameManager.get_truck_capacity()]
 	_shipping_payout.text = "PAYMENT $ %s" % _format_money(GameManager.get_staged_report_total())
-	_send_truck_button.disabled = count == 0
+	if _send_truck_button:
+		_send_truck_button.disabled = count == 0
+		_send_truck_button.modulate = Color(1.0, 1.0, 1.0, 1.0 if count > 0 else 0.42)
 
 
 func _on_send_truck_pressed() -> void:
@@ -1650,12 +1932,43 @@ func _on_shop_action_pressed(device_key: String) -> void:
 		set_hint("Not enough money to upgrade %s." % _device_title(device_key))
 
 
+func _on_personnel_action_pressed(personnel_key: String) -> void:
+	if GameManager.upgrade_personnel(personnel_key):
+		set_hint("%s upgraded to level %d." % [_personnel_title(personnel_key), GameManager.get_personnel_level(personnel_key)])
+	elif GameManager.get_personnel_level(personnel_key) >= GameManager.get_personnel_max_level(personnel_key):
+		set_hint("%s is already fully trained." % _personnel_title(personnel_key))
+	elif not GameManager.can_upgrade_personnel_by_level(personnel_key):
+		set_hint("%s requires player level %d for the next phase." % [
+			_personnel_title(personnel_key),
+			GameManager.get_personnel_upgrade_required_player_level(personnel_key),
+		])
+	else:
+		set_hint("Not enough money to train %s." % _personnel_title(personnel_key))
+
+
+func _on_personnel_employ_pressed(personnel_key: String) -> void:
+	if GameManager.is_personnel_employed(personnel_key):
+		if GameManager.fire_personnel(personnel_key):
+			set_hint("%s fired. Automation disabled." % _personnel_title(personnel_key))
+		return
+	if GameManager.employ_personnel(personnel_key):
+		set_hint("%s employed. Automation enabled." % _personnel_title(personnel_key))
+	elif GameManager.get_personnel_level(personnel_key) <= 0:
+		set_hint("Train %s before employing them." % _personnel_title(personnel_key))
+	else:
+		set_hint("Not enough money to employ %s." % _personnel_title(personnel_key))
+
+
 func _refresh_shop() -> void:
 	for key in _shop_rows.keys():
 		var row: Dictionary = _shop_rows[key]
 		var meta := row.get("meta") as Label
 		var button := row.get("button") as Button
 		if meta == null or button == null:
+			continue
+		if str(row.get("type", "device")) == "personnel":
+			var employ_button := row.get("employ_button") as Button
+			_refresh_personnel_shop_row(key, meta, button, employ_button)
 			continue
 		var owned := GameManager.is_device_owned(key)
 		var level := GameManager.get_device_level(key)
@@ -1684,7 +1997,48 @@ func _refresh_shop() -> void:
 			button.disabled = GameManager.player_money < upgrade_cost or not GameManager.can_upgrade_device_by_level(key)
 
 
+func _refresh_personnel_shop_row(personnel_key: String, meta: Label, train_button: Button, employ_button: Button) -> void:
+	var level := GameManager.get_personnel_level(personnel_key)
+	var max_level := GameManager.get_personnel_max_level(personnel_key)
+	var catalog := GameManager.get_personnel_catalog()
+	var data: Dictionary = catalog.get(personnel_key, {})
+	var phase_text: Array = data.get("phase_text", [])
+	var employed := GameManager.is_personnel_employed(personnel_key)
+	var employment_text := "Employed" if employed else "Not employed"
+	if level >= max_level:
+		meta.text = "%s - level %d / %d - all automation phases trained" % [employment_text, level, max_level]
+		train_button.text = "MAX"
+		train_button.disabled = true
+	else:
+		var upgrade_cost := GameManager.get_personnel_upgrade_cost(personnel_key)
+		var required_level := GameManager.get_personnel_upgrade_required_player_level(personnel_key)
+		var next_text := str(phase_text[level]) if level < phase_text.size() else "Additional automation"
+		meta.text = "%s - level %d / %d - training $%s - requires player Lv %d\n%s" % [
+			employment_text,
+			level,
+			max_level,
+			_format_money(upgrade_cost),
+			required_level,
+			next_text,
+		]
+		train_button.text = "TRAIN"
+		train_button.disabled = GameManager.player_money < upgrade_cost or not GameManager.can_upgrade_personnel_by_level(personnel_key)
+	if employ_button == null:
+		return
+	var employ_cost := GameManager.get_personnel_employ_cost(personnel_key)
+	if employed:
+		employ_button.text = "FIRE"
+		employ_button.disabled = false
+	else:
+		employ_button.text = "EMPLOY $%s" % _format_money(employ_cost)
+		employ_button.disabled = level <= 0 or GameManager.player_money < employ_cost
+
+
 func _on_device_changed(_device_key: String) -> void:
+	_refresh_shop()
+
+
+func _on_personnel_changed(_personnel_key: String) -> void:
 	_refresh_shop()
 
 
@@ -1692,6 +2046,12 @@ func _device_title(device_key: String) -> String:
 	var catalog := GameManager.get_device_catalog()
 	var data: Dictionary = catalog.get(device_key, {})
 	return str(data.get("title", device_key.capitalize()))
+
+
+func _personnel_title(personnel_key: String) -> String:
+	var catalog := GameManager.get_personnel_catalog()
+	var data: Dictionary = catalog.get(personnel_key, {})
+	return str(data.get("title", personnel_key.capitalize()))
 
 
 func _device_capacity_text(device_key: String) -> String:
