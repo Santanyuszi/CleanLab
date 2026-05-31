@@ -4,27 +4,27 @@ extends RefCounted
 const FONT_PRIMARY := "DM Sans"
 const FONT_FALLBACK := "Inter"
 
-const COLOR_MAIN_BACKGROUND := Color("#EFFAF6")
-const COLOR_ALT_DARK := Color("#DDF2EC")
-const COLOR_PANEL_BACKGROUND := Color("#F8FFFC")
-const COLOR_PANEL_HOVER := Color("#E7F7F2")
+const COLOR_MAIN_BACKGROUND := Color("#F2F9F8")
+const COLOR_ALT_DARK := Color("#8FB1B4")
+const COLOR_PANEL_BACKGROUND := Color("#FFFFFF")
+const COLOR_PANEL_HOVER := Color("#F2F9F8")
 
-const COLOR_PRIMARY_ACCENT := Color("#009487")
-const COLOR_BRIGHT_ACCENT := Color("#00B7A8")
-const COLOR_SELECTION_ACCENT := Color("#24C6A6")
+const COLOR_PRIMARY_ACCENT := Color("#4CFFBD")
+const COLOR_BRIGHT_ACCENT := Color("#4CFFBD")
+const COLOR_SELECTION_ACCENT := Color("#4CFFBD")
 const COLOR_SUCCESS := Color("#2AAE68")
 const COLOR_WARNING := Color("#FFB340")
 const COLOR_DANGER := Color("#FF5B5B")
 
-const COLOR_TEXT_PRIMARY := Color("#102928")
-const COLOR_TEXT_SECONDARY := Color("#496866")
-const COLOR_TEXT_DISABLED := Color("#8AA09E")
+const COLOR_TEXT_PRIMARY := Color("#002121")
+const COLOR_TEXT_SECONDARY := Color("#316263")
+const COLOR_TEXT_DISABLED := Color("#8FB1B4")
 
-const COLOR_GLASS_BACKGROUND := Color(0.965, 1.0, 0.985, 0.9)
-const COLOR_GLASS_BORDER := Color(0.42, 0.72, 0.66, 0.32)
+const COLOR_GLASS_BACKGROUND := Color(0.949, 0.976, 0.973, 0.9)
+const COLOR_GLASS_BORDER := Color(0.561, 0.694, 0.706, 0.42)
 
-const COLOR_STATION_IDLE := Color("#9ACBC2")
-const COLOR_BUTTON_PRESSED := Color("#74D6C5")
+const COLOR_STATION_IDLE := Color("#8FB1B4")
+const COLOR_BUTTON_PRESSED := Color("#4CFFBD")
 
 const SPACING_4 := 4
 const SPACING_8 := 8

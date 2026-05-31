@@ -11,7 +11,7 @@ Grid:
 ## Frame Structure
 
 1. Root background
-   - Fill: `#040B12`
+   - Fill: `#F2F9F8`
    - Size: 1920 x 1080
 
 2. Top status bar
@@ -20,16 +20,16 @@ Grid:
    - W: 944
    - H: 80
    - Radius: 16
-   - Fill: `rgba(8,17,26,0.92)`
-   - Stroke: `rgba(255,255,255,0.06)`, 1 px
+   - Fill: `rgba(255,255,255,0.94)`
+   - Stroke: `rgba(143,177,180,0.42)`, 1 px
    - Contains four 220 px stat blocks: LEVEL, XP, MONEY, REPUTATION
 
 3. Logo block
    - X: 40
    - Y: 24
-   - CLEAN: white, 64 px, weight 700
-   - LAB: `#00D7D0`, 64 px, weight 700
-   - Subtitle: 15 px, `#F7FAFC`
+   - CLEAN: `#002121`, 64 px, weight 700
+   - LAB: `#4CFFBD`, 64 px, weight 700
+   - Subtitle: 15 px, `#316263`
 
 4. Left task panel
    - X: 40
@@ -37,7 +37,7 @@ Grid:
    - W: 260
    - H: 270
    - Radius: 20
-   - Fill: `rgba(8,17,26,0.92)`
+   - Fill: `rgba(255,255,255,0.94)`
    - Task card height: 70
    - Card spacing: 12
 

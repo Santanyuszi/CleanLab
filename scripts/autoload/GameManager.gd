@@ -292,8 +292,12 @@ signal problem_inspection_resolved(part: Part, approved: bool)
 signal microscope_session_started(part: Part)
 signal microscopy_results_applied(summary: Dictionary)
 signal delivery_completed(payout: int)
+signal delivery_reports_completed(payout: int, reports: Array)
 signal shipping_changed
 signal contract_offers_changed
+signal contract_accepted(contract: Dictionary)
+signal contract_cancelled(order_id: String)
+signal station_completed(device_key: String)
 
 
 func start_run() -> void:
@@ -328,6 +332,8 @@ func start_run() -> void:
 	economy_changed.emit()
 	sample_queue_changed.emit()
 	shipping_changed.emit()
+	if has_node("/root/AchievementManager"):
+		AchievementManager.reset()
 	refresh_contract_offers(true)
 
 
@@ -434,6 +440,14 @@ func accept_contract_offer(offer_id: String) -> Dictionary:
 			contract_offers_changed.emit()
 			return offer
 	return {}
+
+
+func record_contract_accepted(contract: Dictionary) -> void:
+	contract_accepted.emit(contract.duplicate(true))
+
+
+func record_station_completed(device_key: String) -> void:
+	station_completed.emit(device_key)
 
 
 func get_offer_seconds_left(offer: Dictionary) -> int:
@@ -647,6 +661,7 @@ func cancel_active_contract(order_id: String) -> bool:
 		lab_reputation = clampf(lab_reputation - 1.0, 0.0, 100.0)
 		unregister_part(order_id)
 		economy_changed.emit()
+		contract_cancelled.emit(order_id)
 		return true
 	return false
 
@@ -663,6 +678,7 @@ func stage_report_for_shipping(part: Part) -> bool:
 		"payout": part.order.payout,
 		"tier": part.order.tier,
 		"satisfaction_required": part.order.satisfaction_required,
+		"manufacture_cost": part.order.manufacture_cost,
 	})
 	unregister_part(part.order.order_id)
 	shipping_changed.emit()
@@ -730,6 +746,7 @@ func complete_delivery(payout: int, delivered_reports: Array = []) -> void:
 	_check_contract_breaks()
 	economy_changed.emit()
 	sample_queue_changed.emit()
+	delivery_reports_completed.emit(payout, delivered_reports)
 	delivery_completed.emit(payout)
 
 

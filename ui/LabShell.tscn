@@ -26,7 +26,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.06, 0.08, 0.11, 1)
+color = Color(0.94902, 0.976471, 0.972549, 1)
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -41,11 +41,10 @@ theme_override_constants/separation = 0
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 74)
-script = ExtResource("2_header")
 
 [node name="Margin" type="MarginContainer" parent="VBox/HeaderBar"]
 layout_mode = 2
-theme_override_constants/margin_left = 300
+theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 8
@@ -54,43 +53,9 @@ theme_override_constants/margin_bottom = 8
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="ReputationLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
+[node name="HeaderSpacer" type="Control" parent="VBox/HeaderBar/Margin/HBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(130, 0)
-theme_override_colors/font_color = Color(0.55, 0.9, 1, 1)
-text = "Reputation: 87%"
-
-[node name="LevelLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(145, 0)
-text = "Level 12"
-
-[node name="XPLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(145, 0)
-text = "XP: 0"
-
-[node name="MoneyLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(135, 0)
-theme_override_colors/font_color = Color(0.95, 0.85, 0.4, 1)
-text = "$0"
-
-[node name="SamplesLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(120, 0)
-text = "Samples: 0"
-
-[node name="TimeLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(100, 0)
-text = "Day 1"
+size_flags_horizontal = 3
 
 [node name="MiddleRow" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
@@ -390,7 +355,7 @@ layout_mode = 2
 
 [node name="Title" type="Label" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.9, 1, 1)
+theme_override_colors/font_color = Color(0.192157, 0.384314, 0.388235, 1)
 theme_override_font_sizes/font_size = 15
 text = "Microscope Analysis"
 
@@ -433,7 +398,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.08, 0.1, 0.14, 1)
+color = Color(0.94902, 0.976471, 0.972549, 1)
 
 [node name="PromptLabel" type="Label" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox"]
 unique_name_in_owner = true
@@ -477,32 +442,59 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "SEM/FTIR (S)"
 
-[node name="BottomNav" type="PanelContainer" parent="VBox"]
+[node name="StatusBar" type="PanelContainer" parent="VBox"]
+unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 84)
+custom_minimum_size = Vector2(0, 64)
+script = ExtResource("2_header")
 
-[node name="NavHBox" type="HBoxContainer" parent="VBox/BottomNav"]
+[node name="Margin" type="MarginContainer" parent="VBox/StatusBar"]
 layout_mode = 2
-theme_override_constants/separation = 10
-alignment = 1
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 6
 
-[node name="LabTab" type="Button" parent="VBox/BottomNav/NavHBox"]
+[node name="HBox" type="HBoxContainer" parent="VBox/StatusBar/Margin"]
 layout_mode = 2
-size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 72)
-theme_override_font_sizes/font_size = 14
-text = "LAB"
+theme_override_constants/separation = 6
 
-[node name="ReportsTab" type="Button" parent="VBox/BottomNav/NavHBox"]
+[node name="ReputationLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 72)
-text = "REPORTS"
+custom_minimum_size = Vector2(130, 0)
+theme_override_colors/font_color = Color(0.192157, 0.384314, 0.388235, 1)
+text = "Reputation: 87%"
 
-[node name="ShopTab" type="Button" parent="VBox/BottomNav/NavHBox"]
+[node name="LevelLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 72)
-text = "SHOP"
+custom_minimum_size = Vector2(145, 0)
+text = "Level 12"
+
+[node name="XPLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(145, 0)
+text = "XP: 0"
+
+[node name="MoneyLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(135, 0)
+theme_override_colors/font_color = Color(0, 0.129412, 0.129412, 1)
+text = "$0"
+
+[node name="SamplesLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(120, 0)
+text = "Samples: 0"
+
+[node name="TimeLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(100, 0)
+text = "Day 1"
 
 [node name="ProblemInspectionPopup" parent="." instance=ExtResource("10_popup")]

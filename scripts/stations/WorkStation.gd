@@ -174,6 +174,7 @@ func try_deliver_report(part: Part) -> bool:
 		"payout": part.order.payout,
 		"tier": part.order.tier,
 		"satisfaction_required": part.order.satisfaction_required,
+		"manufacture_cost": part.order.manufacture_cost,
 	}])
 	part.queue_free()
 	_set_status("Reports Out")
@@ -230,6 +231,7 @@ func _on_timer_finished(part: Part) -> void:
 	_set_status("Tap part")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
 	_emit_status()
+	GameManager.record_station_completed(device_key)
 	processing_finished.emit(self)
 	part_ready.emit(self)
 
@@ -296,6 +298,7 @@ func _finish_microscope_part(part: Part) -> void:
 		_set_status("Truck full")
 		_set_platform_color(Color(0.62, 0.28, 0.2))
 	_emit_status()
+	GameManager.record_station_completed(device_key)
 	processing_finished.emit(self)
 	part_ready.emit(self)
 

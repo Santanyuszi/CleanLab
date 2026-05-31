@@ -19,6 +19,8 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 
 GameManager="*res://scripts/autoload/GameManager.gd"
 TouchInput="*res://scripts/autoload/TouchInput.gd"
+PlatformServices="*res://scripts/autoload/PlatformServices.gd"
+AchievementManager="*res://scripts/autoload/AchievementManager.gd"
 
 [display]
 

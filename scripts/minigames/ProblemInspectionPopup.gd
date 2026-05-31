@@ -87,7 +87,7 @@ func _build_zones() -> void:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override("font_size", 13)
-		label.add_theme_color_override("font_color", Color(0.72, 0.95, 1.0))
+		label.add_theme_color_override("font_color", Color("#002121"))
 		zone.add_child(label)
 		_zones[spec["class"]] = Rect2(zone.position, zone.size)
 
@@ -149,7 +149,7 @@ func _show_ok() -> void:
 	ok_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ok_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ok_label.add_theme_font_size_override("font_size", 52)
-	ok_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.35))
+	ok_label.add_theme_color_override("font_color", Color("#4CFFBD"))
 	_board.add_child(ok_label)
 
 
@@ -172,8 +172,8 @@ func _clear_tokens() -> void:
 
 func _zone_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.0, 0.08, 0.1, 0.88)
-	style.border_color = Color(0.0, 0.85, 0.9, 0.85)
+	style.bg_color = Color(1.0, 1.0, 1.0, 0.92)
+	style.border_color = Color("#8FB1B4")
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(6)
 	return style

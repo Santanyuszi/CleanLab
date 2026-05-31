@@ -34,6 +34,7 @@ var _classified_count: int = 0
 var _correct_count: int = 0
 var _wrong_count: int = 0
 var _ftir_flags: int = 0
+var _class_counts: Dictionary = {}
 var _speed_samples: Array[float] = []
 var _swipe_start: Vector2 = Vector2.ZERO
 var _swipe_tracking: bool = false
@@ -124,6 +125,11 @@ func _start_session_async() -> void:
 	_correct_count = 0
 	_wrong_count = 0
 	_ftir_flags = 0
+	_class_counts = {
+		"metallic": 0,
+		"fiber": 0,
+		"non_metallic": 0,
+	}
 	_speed_samples.clear()
 	_selected = null
 	_clear_particles()
@@ -178,6 +184,7 @@ func _submit_classification(chosen: ParticleTypes.Class) -> void:
 
 	if correct:
 		_correct_count += 1
+		_track_correct_class(chosen)
 		var gained := int(BASE_SCORE * _combo)
 		if reaction <= SPEED_BONUS_THRESHOLD:
 			gained = int(gained * SPEED_BONUS_MULT)
@@ -223,6 +230,7 @@ func _finish_session() -> void:
 		"ftir_flags": _ftir_flags,
 		"wrong": _wrong_count,
 		"classified": _classified_count,
+		"class_counts": _class_counts.duplicate(true),
 	}
 
 	_show_results(summary)
@@ -235,6 +243,16 @@ func _finish_session() -> void:
 	if microscope is MicroscopeStation:
 		microscope.consume_sample_after_minigame()
 	_clear_particles()
+
+
+func _track_correct_class(chosen: ParticleTypes.Class) -> void:
+	match chosen:
+		ParticleTypes.Class.METALLIC:
+			_class_counts["metallic"] = int(_class_counts.get("metallic", 0)) + 1
+		ParticleTypes.Class.FIBER:
+			_class_counts["fiber"] = int(_class_counts.get("fiber", 0)) + 1
+		ParticleTypes.Class.NON_METALLIC:
+			_class_counts["non_metallic"] = int(_class_counts.get("non_metallic", 0)) + 1
 
 
 func _show_results(summary: Dictionary) -> void:
