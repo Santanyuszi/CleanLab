@@ -46,6 +46,7 @@ const STATION_BUTTONS := {
 }
 
 const TRUCK_BUTTON_PATH := "res://assets/ui/CleanLab_TruckButton.png"
+const LAB_ART_SIZE := Vector2(1508.0, 1043.0)
 const STATION_BUTTON_SCALE := Vector2(2.35, 2.35)
 const STATION_OVERLAY_IDLE := Color(1.0, 1.0, 1.0, 1.0)
 
@@ -72,6 +73,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_fit_art_to_viewport()
 	_automation_tick += delta
 	_auto_contract_tick += delta
 	_auto_truck_tick += delta
@@ -84,6 +86,19 @@ func _process(delta: float) -> void:
 	if _auto_truck_tick >= 2.0:
 		_auto_truck_tick = 0.0
 		_try_auto_send_truck()
+
+
+func _fit_art_to_viewport() -> void:
+	var viewport_size := get_viewport_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	var fit_scale := maxf(viewport_size.x / LAB_ART_SIZE.x, viewport_size.y / LAB_ART_SIZE.y)
+	var target_scale := Vector2(fit_scale, fit_scale)
+	var target_position := ((viewport_size - LAB_ART_SIZE * fit_scale) * 0.5).floor()
+	if scale.distance_to(target_scale) > 0.001:
+		scale = target_scale
+	if position.distance_to(target_position) > 0.5:
+		position = target_position
 
 
 func spawn_contract(contract: Dictionary) -> void:

@@ -764,7 +764,7 @@ func queue_escalation_ticket(title: String, severity: int, reward: int, penalty:
 func resolve_next_escalation(success: bool) -> Dictionary:
 	if escalation_tickets.is_empty():
 		return {}
-	var ticket := escalation_tickets.pop_front()
+	var ticket: Dictionary = escalation_tickets.pop_front()
 	var severity := int(ticket.get("severity", 1))
 	if success:
 		var reward := int(ticket.get("reward", 0))
@@ -1136,7 +1136,7 @@ func load_progress() -> bool:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if file == null:
 		return false
-	var parsed := JSON.parse_string(file.get_as_text())
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
 	var data: Dictionary = parsed
