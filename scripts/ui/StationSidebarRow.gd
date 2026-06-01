@@ -24,6 +24,6 @@ func update_status(status: String, progress: float, time_left: float) -> void:
 	_progress.value = progress
 	if time_left > 0.0:
 		var sec: int = int(ceilf(time_left))
-		_timer.text = "%02d:%02d" % [sec / 60, sec % 60]
+		_timer.text = "%02d:%02d" % [floori(sec / 60.0), sec % 60]
 	else:
 		_timer.text = ""

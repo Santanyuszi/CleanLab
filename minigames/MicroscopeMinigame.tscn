@@ -24,7 +24,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
-color = Color(0.03, 0.05, 0.1, 0.97)
+color = Color(0.94902, 0.976471, 0.972549, 0.97)
 
 [node name="TopBar" type="PanelContainer" parent="Root"]
 layout_mode = 1
@@ -45,7 +45,7 @@ alignment = 1
 [node name="TimerLabel" type="Label" parent="Root/TopBar/Margin/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.55, 0.9, 1, 1)
+theme_override_colors/font_color = Color(0.192157, 0.384314, 0.388235, 1)
 theme_override_font_sizes/font_size = 20
 text = "15s"
 horizontal_alignment = 1
@@ -53,7 +53,7 @@ horizontal_alignment = 1
 [node name="ComboLabel" type="Label" parent="Root/TopBar/Margin/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.95, 0.75, 0.35, 1)
+theme_override_colors/font_color = Color(0, 0.129412, 0.129412, 1)
 theme_override_font_sizes/font_size = 20
 text = "x1.00"
 horizontal_alignment = 1
@@ -61,7 +61,7 @@ horizontal_alignment = 1
 [node name="ScoreLabel" type="Label" parent="Root/TopBar/Margin/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.9, 0.95, 1, 1)
+theme_override_colors/font_color = Color(0.192157, 0.384314, 0.388235, 1)
 theme_override_font_sizes/font_size = 20
 text = "Score 0"
 horizontal_alignment = 1
@@ -97,11 +97,11 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.1, 0.14, 0.2, 1)
+color = Color(0, 0.129412, 0.129412, 1)
 
 [node name="SwipeHint" type="Label" parent="Root/Content"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.58, 0.66, 1)
+theme_override_colors/font_color = Color(0.560784, 0.694118, 0.705882, 1)
 theme_override_font_sizes/font_size = 11
 text = "↑ Metal  ← Fiber  → Non-metal  ↓ Ignore  ·  FTIR button for spectroscopy"
 horizontal_alignment = 1

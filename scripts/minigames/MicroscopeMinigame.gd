@@ -6,11 +6,12 @@ const BASE_SCORE: int = 80
 const COMBO_STEP: float = 0.12
 const SPEED_BONUS_THRESHOLD: float = 2.0
 const SPEED_BONUS_MULT: float = 1.35
-const WRONG_REPUTATION: float = -3.0
-const CORRECT_REPUTATION: float = 0.6
+const WRONG_REPUTATION: float = -1.0
+const CORRECT_REPUTATION: float = 0.8
 const SWIPE_MIN_DISTANCE: float = 80.0
 
-@export var particles_per_session: int = 10
+@export var min_particles_per_session: int = 1
+@export var max_particles_per_session: int = 2
 @export var particle_scene: PackedScene
 
 @onready var _particle_field: Control = $Root/Content/ParticleField
@@ -33,6 +34,7 @@ var _classified_count: int = 0
 var _correct_count: int = 0
 var _wrong_count: int = 0
 var _ftir_flags: int = 0
+var _class_counts: Dictionary = {}
 var _speed_samples: Array[float] = []
 var _swipe_start: Vector2 = Vector2.ZERO
 var _swipe_tracking: bool = false
@@ -43,7 +45,8 @@ func _ready() -> void:
 	visible = false
 	process_mode = Node.PROCESS_MODE_DISABLED
 	_results_panel.visible = false
-	GameManager.microscope_minigame_requested.connect(_on_minigame_requested)
+	if GameManager.has_signal("microscope_minigame_requested"):
+		GameManager.connect("microscope_minigame_requested", _on_minigame_requested)
 	_cache_buttons()
 	_apply_touch_sizes()
 
@@ -122,6 +125,11 @@ func _start_session_async() -> void:
 	_correct_count = 0
 	_wrong_count = 0
 	_ftir_flags = 0
+	_class_counts = {
+		"metallic": 0,
+		"fiber": 0,
+		"non_metallic": 0,
+	}
 	_speed_samples.clear()
 	_selected = null
 	_clear_particles()
@@ -136,7 +144,8 @@ func _spawn_particles() -> void:
 	if field_size.x < 10.0:
 		field_size = Vector2(900, 360)
 	var margin := 40.0
-	for i in particles_per_session:
+	var particle_count := randi_range(min_particles_per_session, max_particles_per_session)
+	for i in particle_count:
 		var spot: ParticleSpot = particle_scene.instantiate()
 		_particle_field.add_child(spot)
 		var p_class := randi() % 5 as ParticleTypes.Class
@@ -175,6 +184,7 @@ func _submit_classification(chosen: ParticleTypes.Class) -> void:
 
 	if correct:
 		_correct_count += 1
+		_track_correct_class(chosen)
 		var gained := int(BASE_SCORE * _combo)
 		if reaction <= SPEED_BONUS_THRESHOLD:
 			gained = int(gained * SPEED_BONUS_MULT)
@@ -220,6 +230,7 @@ func _finish_session() -> void:
 		"ftir_flags": _ftir_flags,
 		"wrong": _wrong_count,
 		"classified": _classified_count,
+		"class_counts": _class_counts.duplicate(true),
 	}
 
 	_show_results(summary)
@@ -234,15 +245,25 @@ func _finish_session() -> void:
 	_clear_particles()
 
 
+func _track_correct_class(chosen: ParticleTypes.Class) -> void:
+	match chosen:
+		ParticleTypes.Class.METALLIC:
+			_class_counts["metallic"] = int(_class_counts.get("metallic", 0)) + 1
+		ParticleTypes.Class.FIBER:
+			_class_counts["fiber"] = int(_class_counts.get("fiber", 0)) + 1
+		ParticleTypes.Class.NON_METALLIC:
+			_class_counts["non_metallic"] = int(_class_counts.get("non_metallic", 0)) + 1
+
+
 func _show_results(summary: Dictionary) -> void:
 	_results_panel.visible = true
 	_results_label.text = (
-		"Inspection complete\nScore: %d  ·  Accuracy: %d%%\n+%d XP  ·  +%d credits\nEscalation risk: %.0f%%"
+		"Inspection complete\nScore: %d  ·  Accuracy: %d%%\n+%d XP  ·  +%d credits\nEscalation risk: %.0f%%\nResolve tickets to lower risk."
 		% [
 			summary.score,
 			int(summary.accuracy * 100.0),
-			summary.score / 8 + int(summary.accuracy * 20.0),
-			summary.score / 4,
+			floori(summary.score / 8.0) + int(summary.accuracy * 20.0),
+			floori(summary.score / 4.0),
 			GameManager.escalation_risk * 100.0,
 		]
 	)

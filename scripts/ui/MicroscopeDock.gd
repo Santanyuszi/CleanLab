@@ -27,9 +27,12 @@ func _ready() -> void:
 	visible = false
 	GameManager.microscope_session_started.connect(_on_session_started)
 	for i in 5:
-		var btn: Button = get_node("Margin/VBox/Bottom/ClassRow/ClassBtn%d" % i)
+		var btn := find_child("ClassBtn%d" % i, true, false) as Button
+		if btn == null:
+			continue
 		btn.pressed.connect(_on_class_pressed.bind(i))
-		btn.custom_minimum_size = Vector2(0, 72)
+		btn.custom_minimum_size = Vector2(0, 64)
+		btn.add_theme_font_size_override("font_size", 14)
 
 
 func set_active(on: bool) -> void:
@@ -46,7 +49,7 @@ func _on_session_started(part: Part) -> void:
 	_combo_val = 1.0
 	_correct = 0
 	_wrong = 0
-	_total = 10
+	_total = randi_range(1, 2)
 	_selected = null
 	_clear_particles()
 	call_deferred("_deferred_spawn_particles")
@@ -62,7 +65,8 @@ func _process(delta: float) -> void:
 	if not _active:
 		return
 	_time_left -= delta
-	_timer.text = "%02d:%02d" % [int(_time_left) / 60, int(_time_left) % 60]
+	var seconds_left := int(_time_left)
+	_timer.text = "%02d:%02d" % [floori(seconds_left / 60.0), seconds_left % 60]
 	if _time_left <= 0.0:
 		_finish()
 
@@ -89,6 +93,7 @@ func _on_particle_tapped(spot: ParticleSpot) -> void:
 
 func _on_class_pressed(class_id: int) -> void:
 	if not _active or _selected == null:
+		_prompt.text = "Select a particle before classifying."
 		return
 	var chosen: ParticleTypes.Class = class_id as ParticleTypes.Class
 	var ok: bool = _selected.true_class == chosen
@@ -96,9 +101,11 @@ func _on_class_pressed(class_id: int) -> void:
 		_correct += 1
 		_score_val += int(80 * _combo_val)
 		_combo_val = minf(_combo_val + 0.12, 3.5)
+		_prompt.text = "Correct. Keep the streak alive."
 	else:
 		_wrong += 1
 		_combo_val = 1.0
+		_prompt.text = "Incorrect. Next particle can recover accuracy."
 	_selected.mark_classified()
 	_selected = null
 	_refresh_stats()
@@ -118,6 +125,10 @@ func _finish() -> void:
 		"classified": _correct,
 	}
 	GameManager.apply_microscopy_results(summary)
+	if _wrong > 0:
+		_prompt.text = "Session complete. Check escalation desk for follow-up."
+	else:
+		_prompt.text = "Session complete. Report staged automatically when possible."
 	var microscope: WorkStation = null
 	for node in get_tree().get_nodes_in_group("work_station"):
 		var s: WorkStation = node as WorkStation

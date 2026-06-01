@@ -6,10 +6,10 @@
 [ext_resource type="Script" path="res://scripts/ui/StationSidebarRow.gd" id="4_row"]
 [ext_resource type="Script" path="res://scripts/ui/SampleQueuePanel.gd" id="5_queue"]
 [ext_resource type="Script" path="res://scripts/ui/MicroscopeDock.gd" id="6_micro"]
-[ext_resource type="Script" path="res://scripts/ui/EscalationPanel.gd" id="7_esc"]
 [ext_resource type="PackedScene" uid="uid://labroom001" path="res://scenes/laboratory/LaboratoryRoom.tscn" id="8_lab"]
 [ext_resource type="PackedScene" uid="uid://particlespot001" path="res://scenes/minigames/ParticleSpot.tscn" id="9_spot"]
 [ext_resource type="PackedScene" uid="uid://problempopup001" path="res://minigames/ProblemInspectionPopup.tscn" id="10_popup"]
+[ext_resource type="Script" path="res://scripts/ui/EscalationPanel.gd" id="11_escalation"]
 
 [node name="LabShell" type="Control"]
 layout_mode = 3
@@ -27,7 +27,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.06, 0.08, 0.11, 1)
+color = Color(0.94902, 0.976471, 0.972549, 1)
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -41,50 +41,22 @@ theme_override_constants/separation = 0
 [node name="HeaderBar" type="PanelContainer" parent="VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
-script = ExtResource("2_header")
+custom_minimum_size = Vector2(0, 74)
 
 [node name="Margin" type="MarginContainer" parent="VBox/HeaderBar"]
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_right = 20
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
 
 [node name="HBox" type="HBoxContainer" parent="VBox/HeaderBar/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 28
-alignment = 1
+theme_override_constants/separation = 6
 
-[node name="ReputationLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
+[node name="HeaderSpacer" type="Control" parent="VBox/HeaderBar/Margin/HBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.9, 1, 1)
-text = "Reputation: 87%"
-
-[node name="LevelLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Level 12"
-
-[node name="XPLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "XP: 0"
-
-[node name="MoneyLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.85, 0.4, 1)
-text = "$0"
-
-[node name="SamplesLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Samples: 0"
-
-[node name="TimeLabel" type="Label" parent="VBox/HeaderBar/Margin/HBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Day 1"
+size_flags_horizontal = 3
 
 [node name="MiddleRow" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
@@ -94,26 +66,29 @@ theme_override_constants/separation = 0
 [node name="LabViewportContainer" type="PanelContainer" parent="VBox/MiddleRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 5.0
+size_flags_stretch_ratio = 10.0
 
 [node name="SubViewportContainer" type="SubViewportContainer" parent="VBox/MiddleRow/LabViewportContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 stretch = true
+stretch_shrink = 1
 
 [node name="LabViewport" type="SubViewport" parent="VBox/MiddleRow/LabViewportContainer/SubViewportContainer"]
 unique_name_in_owner = true
 handle_input_locally = true
-size = Vector2i(1600, 720)
+size = Vector2i(1508, 1043)
+transparent_bg = true
 render_target_update_mode = 4
 
 [node name="LaboratoryRoom" parent="VBox/MiddleRow/LabViewportContainer/SubViewportContainer/LabViewport" instance=ExtResource("8_lab")]
 
 [node name="StationSidebar" type="PanelContainer" parent="VBox/MiddleRow"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(0, 0)
 script = ExtResource("3_sidebar")
 
 [node name="Margin" type="MarginContainer" parent="VBox/MiddleRow/StationSidebar"]
@@ -159,18 +134,15 @@ layout_mode = 2
 text = "Lv 1"
 
 [node name="StatusLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/ExtractionRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "Idle"
 
 [node name="ProgressBar" type="ProgressBar" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/ExtractionRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 max_value = 1.0
 show_percentage = false
 
 [node name="TimerLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/ExtractionRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "00:00"
 
@@ -192,29 +164,24 @@ layout_mode = 2
 layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/DryingRow/RowMargin/RowVBox/TitleHBox"]
-unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Station"
 
 [node name="LevelLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/DryingRow/RowMargin/RowVBox/TitleHBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "Lv 1"
 
 [node name="StatusLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/DryingRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "Idle"
 
 [node name="ProgressBar" type="ProgressBar" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/DryingRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 max_value = 1.0
 show_percentage = false
 
 [node name="TimerLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/DryingRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 
 [node name="MicroscopeRow" type="PanelContainer" parent="VBox/MiddleRow/StationSidebar/Margin/VBox"]
@@ -235,29 +202,24 @@ layout_mode = 2
 layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/MicroscopeRow/RowMargin/RowVBox/TitleHBox"]
-unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Station"
 
 [node name="LevelLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/MicroscopeRow/RowMargin/RowVBox/TitleHBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "Lv 1"
 
 [node name="StatusLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/MicroscopeRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "Idle"
 
 [node name="ProgressBar" type="ProgressBar" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/MicroscopeRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 max_value = 1.0
 show_percentage = false
 
 [node name="TimerLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/MicroscopeRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 
 [node name="StorageRow" type="PanelContainer" parent="VBox/MiddleRow/StationSidebar/Margin/VBox"]
@@ -278,29 +240,24 @@ layout_mode = 2
 layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/StorageRow/RowMargin/RowVBox/TitleHBox"]
-unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Storage"
 
 [node name="LevelLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/StorageRow/RowMargin/RowVBox/TitleHBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "Lv 2"
 
 [node name="StatusLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/StorageRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "Idle"
 
 [node name="ProgressBar" type="ProgressBar" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/StorageRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 max_value = 1.0
 show_percentage = false
 
 [node name="TimerLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/StorageRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 
 [node name="EscalationRow" type="PanelContainer" parent="VBox/MiddleRow/StationSidebar/Margin/VBox"]
@@ -321,34 +278,29 @@ layout_mode = 2
 layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox/TitleHBox"]
-unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Escalation"
 
 [node name="LevelLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox/TitleHBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "Lv 2"
 
 [node name="StatusLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 text = "New Ticket"
 
 [node name="ProgressBar" type="ProgressBar" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 max_value = 1.0
 show_percentage = false
 
 [node name="TimerLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox"]
-unique_name_in_owner = true
 layout_mode = 2
 
 [node name="BottomRow" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 200)
+custom_minimum_size = Vector2(0, 150)
 theme_override_constants/separation = 8
 
 [node name="SampleQueuePanel" type="PanelContainer" parent="VBox/BottomRow"]
@@ -405,7 +357,7 @@ layout_mode = 2
 
 [node name="Title" type="Label" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.9, 1, 1)
+theme_override_colors/font_color = Color(0.192157, 0.384314, 0.388235, 1)
 theme_override_font_sizes/font_size = 15
 text = "Microscope Analysis"
 
@@ -448,7 +400,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.08, 0.1, 0.14, 1)
+color = Color(0.94902, 0.976471, 0.972549, 1)
 
 [node name="PromptLabel" type="Label" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox"]
 unique_name_in_owner = true
@@ -478,83 +430,87 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Non-metal (N)"
 
-[node name="ClassBtn3" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow"]
+[node name="ClassRow2" type="HBoxContainer" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ClassBtn3" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow2"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Ignore (I)"
 
-[node name="ClassBtn4" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow"]
+[node name="ClassBtn4" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow2"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "SEM/FTIR (S)"
 
-[node name="EscalationPanel" type="PanelContainer" parent="VBox/BottomRow"]
+[node name="StatusBar" type="PanelContainer" parent="VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 1.2
-script = ExtResource("7_esc")
+custom_minimum_size = Vector2(0, 64)
+script = ExtResource("2_header")
 
-[node name="Margin" type="MarginContainer" parent="VBox/BottomRow/EscalationPanel"]
+[node name="Margin" type="MarginContainer" parent="VBox/StatusBar"]
 layout_mode = 2
 theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 10
+theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_bottom = 6
 
-[node name="VBox" type="VBoxContainer" parent="VBox/BottomRow/EscalationPanel/Margin"]
+[node name="HBox" type="HBoxContainer" parent="VBox/StatusBar/Margin"]
 layout_mode = 2
+theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="VBox/BottomRow/EscalationPanel/Margin/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 15
-text = "Escalation Overview"
-
-[node name="BodyLabel" type="Label" parent="VBox/BottomRow/EscalationPanel/Margin/VBox"]
+[node name="ReputationLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 3
-text = "No escalations"
-autowrap_mode = 2
+custom_minimum_size = Vector2(130, 0)
+theme_override_colors/font_color = Color(0.192157, 0.384314, 0.388235, 1)
+text = "Reputation: 87%"
 
-[node name="BottomNav" type="PanelContainer" parent="VBox"]
+[node name="LevelLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(145, 0)
+text = "Level 12"
 
-[node name="NavHBox" type="HBoxContainer" parent="VBox/BottomNav"]
+[node name="XPLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 4
-alignment = 1
+custom_minimum_size = Vector2(145, 0)
+text = "XP: 0"
 
-[node name="LabTab" type="Button" parent="VBox/BottomNav/NavHBox"]
+[node name="MoneyLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 14
-text = "Lab"
+custom_minimum_size = Vector2(135, 0)
+theme_override_colors/font_color = Color(0, 0.129412, 0.129412, 1)
+text = "$0"
 
-[node name="SamplesTab" type="Button" parent="VBox/BottomNav/NavHBox"]
+[node name="SamplesLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
-size_flags_horizontal = 3
-text = "Samples"
+custom_minimum_size = Vector2(0, 0)
+text = "Samples: 0"
 
-[node name="StaffTab" type="Button" parent="VBox/BottomNav/NavHBox"]
+[node name="TimeLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
-size_flags_horizontal = 3
-text = "Staff"
-
-[node name="UpgradesTab" type="Button" parent="VBox/BottomNav/NavHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Upgrades"
-
-[node name="ReportsTab" type="Button" parent="VBox/BottomNav/NavHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Reports"
-
-[node name="EscalationsTab" type="Button" parent="VBox/BottomNav/NavHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Escalations"
+custom_minimum_size = Vector2(0, 0)
+text = "Day 1"
 
 [node name="ProblemInspectionPopup" parent="." instance=ExtResource("10_popup")]
+
+[node name="EscalationPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -360.0
+offset_top = 88.0
+offset_right = -18.0
+offset_bottom = 236.0
+grow_horizontal = 0
+script = ExtResource("11_escalation")
