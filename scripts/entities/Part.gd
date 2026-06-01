@@ -150,7 +150,6 @@ func _refresh_visual() -> void:
 			_report_badge.visible = true
 
 
-<<<<<<< HEAD
 static func _kind_to_station_name(kind: int) -> String:
 	match kind:
 		WorkStation.Kind.EXTRACTION: return "Extraction Cabinet"
@@ -159,7 +158,8 @@ static func _kind_to_station_name(kind: int) -> String:
 		WorkStation.Kind.SEM:        return "SEM Analyzer"
 		WorkStation.Kind.FTIR:       return "FTIR Spectrometer"
 	return "Station"
-=======
+
+
 func _apply_thumbnail() -> void:
 	_thumbnail.visible = false
 	if order.thumbnail_path.is_empty() or not FileAccess.file_exists(order.thumbnail_path):
@@ -183,4 +183,3 @@ func _play_spawn_animation() -> void:
 	tween.set_trans(Tween.TRANS_BACK)
 	tween.set_ease(Tween.EASE_OUT)
 	tween.tween_property(self, "scale", Vector2.ONE, 0.22)
->>>>>>> origin/main

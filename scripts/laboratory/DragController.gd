@@ -55,18 +55,12 @@ func _handle_tap(world: Vector2) -> void:
 		return
 	var station: WorkStation = _station_at(world)
 	if station and station.can_pick_up():
-<<<<<<< HEAD
-		_carried = station.pick_up()
-		_carried.begin_drag()
-		_hint(_drag_hint_for(_carried))
-=======
 		if station.station_kind == WorkStation.Kind.MICROSCOPE and station.held_part and station.held_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_report():
 			_flash_station_warning(station.device_key)
 			_hint("Truck is full. Send it before the microscope can release more reports.")
 			return
 		_play_claim_sfx()
 		_route_part(station.pick_up(), true)
->>>>>>> origin/main
 		return
 	if station and station.held_part != null:
 		_hint("Processing at %s." % station.station_title)
@@ -94,38 +88,13 @@ func _part_at(world: Vector2) -> Part:
 		if part == null or part.is_on_station:
 			continue
 		if part.global_position.distance_to(world) < 56.0:
-<<<<<<< HEAD
-			_carried = part
-			_carried.begin_drag()
-			_hint(_drag_hint_for(_carried))
-			return
-=======
 			return part
 	return null
->>>>>>> origin/main
 
 
 func _route_part(part: Part, already_claimed: bool = false) -> void:
 	if part == null:
 		return
-<<<<<<< HEAD
-	var station: WorkStation = _station_at(world)
-	if station:
-		if station.station_kind == WorkStation.Kind.TRUCK:
-			if station.try_deliver_report(_carried):
-				var payout: int = _carried.order.payout
-				var name: String = _carried.order.display_name
-				_carried.end_drag()
-				_carried = null
-				_hint("Truck departed — +$%d  ·  %s" % [payout, name])
-				_lab.call_deferred("_spawn_next_order")
-				return
-		if station.try_accept_part(_carried):
-			_drop_cleanup("Processing at %s…" % station.station_title)
-			return
-	_hint("Drop on an open station.")
-	_carried.global_position = world
-=======
 	if part.current_step == Part.Step.REPORT_READY:
 		_stage_report(part)
 		return
@@ -143,21 +112,13 @@ func _route_part(part: Part, already_claimed: bool = false) -> void:
 			_play_claim_sfx()
 		part.global_position = from_pos
 		_tween_part_to(part, station.get_slot_global_position())
-		_hint("%s started." % station.station_title)
->>>>>>> origin/main
+		_hint(_drag_hint_for(part))
 
 
 func _next_station_for(part: Part) -> WorkStation:
-	var target_kind: WorkStation.Kind
-	match part.current_step:
-		Part.Step.INCOMING:
-			target_kind = WorkStation.Kind.EXTRACTION
-		Part.Step.EXTRACTED:
-			target_kind = WorkStation.Kind.DRYING
-		Part.Step.DRIED:
-			target_kind = WorkStation.Kind.MICROSCOPE
-		_:
-			return null
+	var target_kind := part.next_required_station_kind()
+	if target_kind < 0:
+		return null
 	for node in get_tree().get_nodes_in_group("work_station"):
 		var station := node as WorkStation
 		if station and station.station_kind == target_kind:
@@ -199,13 +160,13 @@ func _hint(text: String) -> void:
 		_shell.set_hint(text)
 
 
-<<<<<<< HEAD
 func _drag_hint_for(part: Part) -> String:
 	if part.current_step == Part.Step.REPORT_READY:
 		return "%s — drag the report to the Truck Dock." % part.order.display_name
 	var destination := part.next_station_name()
 	return "%s — drag to %s." % [part.order.display_name, destination]
-=======
+
+
 func _flash_station_warning(device_key: String) -> void:
 	if _lab and _lab.has_method("flash_station_warning"):
 		_lab.call("flash_station_warning", device_key)
@@ -214,4 +175,3 @@ func _flash_station_warning(device_key: String) -> void:
 func _play_claim_sfx() -> void:
 	if _shell and _shell.has_method("play_claim_sfx"):
 		_shell.play_claim_sfx()
->>>>>>> origin/main

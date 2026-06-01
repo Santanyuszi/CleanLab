@@ -51,9 +51,7 @@ const STATION_OVERLAY_IDLE := Color(1.0, 1.0, 1.0, 1.0)
 
 @onready var _incoming_pad: Marker2D = %IncomingPad
 
-<<<<<<< HEAD
 var _order_counter: int = 0
-=======
 var _button_tweens: Dictionary = {}
 var _button_states: Dictionary = {}
 var _automation_tick: float = 0.0
@@ -62,7 +60,6 @@ var _auto_truck_tick: float = 0.0
 var _truck_overlay_button: TextureButton = null
 var _truck_count_label: Label = null
 var _truck_overlay_tween: Tween = null
->>>>>>> origin/main
 
 
 func _ready() -> void:
@@ -75,12 +72,6 @@ func _ready() -> void:
 	GameManager.start_run()
 
 
-<<<<<<< HEAD
-func _spawn_next_order() -> void:
-	_order_counter += 1
-	var order_id := "PRT-%03d" % _order_counter
-	var order := JobCatalog.random_order(GameManager.player_level, order_id)
-=======
 func _process(delta: float) -> void:
 	_automation_tick += delta
 	_auto_contract_tick += delta
@@ -126,10 +117,16 @@ func cancel_contract_order(order_id: String) -> bool:
 	return false
 
 
+func _spawn_next_order() -> void:
+	_order_counter += 1
+	var order_id := "PRT-%03d" % _order_counter
+	var order := JobCatalog.random_order(GameManager.player_level, order_id)
+	_spawn_order(order)
+
+
 func _spawn_order(order: PartOrder) -> void:
 	if not GameManager.has_manufacturing_capacity():
 		return
->>>>>>> origin/main
 	var part: Part = part_scene.instantiate()
 	part.order = order
 	var drop_target := _incoming_pad.global_position + Vector2(randf_range(-8.0, 8.0), randf_range(-6.0, 6.0))

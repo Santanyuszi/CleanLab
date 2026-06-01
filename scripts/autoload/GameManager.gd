@@ -894,21 +894,14 @@ func register_part_in_queue(part: Part) -> void:
 	samples_in_lab += 1
 	sample_queue.append({
 		"name": part.order.order_id,
-<<<<<<< HEAD
 		"display_name": part.order.display_name,
 		"stage": "Incoming",
 		"next_step": part.next_station_name(),
 		"payout": part.order.payout,
 		"priority": _priority_for_payout(part.order.payout),
-=======
-		"part_name": part.order.part_name,
-		"stage": "Incoming",
-		"priority": "Tier %d" % part.order.tier,
-		"satisfaction_required": part.order.satisfaction_required,
-		"manufacture_cost": part.order.manufacture_cost,
-		"payout": part.order.payout,
 		"broken": false,
->>>>>>> origin/main
+		"manufacture_cost": part.order.manufacture_cost,
+		"satisfaction_required": part.order.satisfaction_required,
 	})
 	sample_queue_changed.emit()
 	save_progress()

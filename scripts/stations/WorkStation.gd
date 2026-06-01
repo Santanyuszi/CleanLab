@@ -195,18 +195,15 @@ func resume_after_inspection(passed: bool) -> void:
 		_refresh_aggregate_state()
 		_set_status("Re-analysis...")
 		return
-<<<<<<< HEAD
-	held_part.advance_step_after_station(station_kind)
+	inspected_part.advance_step_after_station(station_kind)
+	_part_states[inspected_part.order.order_id] = SlotState.READY
 	slot_state = SlotState.READY
-	if held_part.current_step == Part.Step.REPORT_READY:
+	if inspected_part.current_step == Part.Step.REPORT_READY:
 		_set_status("Tap to collect report")
 	else:
 		_set_status("Tap to collect")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
-	GameManager.update_queue_for_part(held_part, "Ready")
-=======
-	_finish_microscope_part(inspected_part)
->>>>>>> origin/main
+	GameManager.update_queue_for_part(inspected_part, "Ready")
 	part_ready.emit(self)
 
 
@@ -231,25 +228,22 @@ func _on_timer_finished(part: Part) -> void:
 	if part == null:
 		return
 	if station_kind == Kind.MICROSCOPE:
-<<<<<<< HEAD
-		var chance := held_part.order.problem_chance if held_part.order != null else GameManager.MINIGAME_PROBLEM_CHANCE
+		var chance := part.order.problem_chance if part.order != null else GameManager.MINIGAME_PROBLEM_CHANCE
 		if randf() < chance:
-			slot_state = SlotState.AWAITING_INSPECTION
+			_part_states[part.order.order_id] = SlotState.AWAITING_INSPECTION
+			held_part = part
+			_refresh_aggregate_state()
 			_set_status("QC problem!")
 			_set_platform_color(Color(0.62, 0.28, 0.55))
 			_emit_status()
 			var claims: Array = _build_inspection_claims()
-			GameManager.enter_problem_inspection(held_part, claims)
+			GameManager.enter_problem_inspection(part, claims)
 			return
-		slot_state = SlotState.AWAITING_INSPECTION
-		_set_status("Inspection…")
-=======
 		_part_states[part.order.order_id] = SlotState.AWAITING_INSPECTION
 		held_part = part
 		_refresh_aggregate_state()
 		_set_status("Analyze")
 		_set_platform_color(Color(0.24, 0.48, 0.62))
->>>>>>> origin/main
 		_emit_status()
 		GameManager.start_microscope_session(part)
 		return
@@ -258,11 +252,8 @@ func _on_timer_finished(part: Part) -> void:
 	_set_status("Tap part")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
 	_emit_status()
-<<<<<<< HEAD
-	GameManager.update_queue_for_part(held_part, "Ready")
-=======
+	GameManager.update_queue_for_part(part, "Ready")
 	GameManager.record_station_completed(device_key)
->>>>>>> origin/main
 	processing_finished.emit(self)
 	part_ready.emit(self)
 
