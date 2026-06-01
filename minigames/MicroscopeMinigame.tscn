@@ -82,7 +82,7 @@ theme_override_constants/separation = 8
 [node name="PromptLabel" type="Label" parent="Root/Content"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
-text = "Tap a particle, then classify"
+text = "Revision needed"
 horizontal_alignment = 1
 
 [node name="ParticleField" type="Control" parent="Root/Content"]
@@ -103,7 +103,7 @@ color = Color(0, 0.129412, 0.129412, 1)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.560784, 0.694118, 0.705882, 1)
 theme_override_font_sizes/font_size = 11
-text = "↑ Metal  ← Fiber  → Non-metal  ↓ Ignore  ·  FTIR button for spectroscopy"
+text = "Revision needed: answer the material claim with Yes or No."
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -156,10 +156,10 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Ignore"
 
-[node name="FtirBtn" type="Button" parent="Root/BottomBar/Margin/HBox/Row2"]
+[node name="UnusedBtn" type="Button" parent="Root/BottomBar/Margin/HBox/Row2"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "FTIR / SEM"
+text = ""
 
 [node name="ResultsPanel" type="PanelContainer" parent="Root"]
 visible = false
@@ -193,4 +193,3 @@ horizontal_alignment = 1
 [connection signal="pressed" from="Root/BottomBar/Margin/HBox/Row1/FiberBtn" to="." method="_on_class_pressed" binds= [1]]
 [connection signal="pressed" from="Root/BottomBar/Margin/HBox/Row1/NonMetallicBtn" to="." method="_on_class_pressed" binds= [2]]
 [connection signal="pressed" from="Root/BottomBar/Margin/HBox/Row2/IgnoreBtn" to="." method="_on_class_pressed" binds= [3]]
-[connection signal="pressed" from="Root/BottomBar/Margin/HBox/Row2/FtirBtn" to="." method="_on_class_pressed" binds= [4]]

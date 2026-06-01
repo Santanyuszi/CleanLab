@@ -39,6 +39,11 @@ const DEVICE_OVERLAY_NODES := {
 	"microscope": &"MicroscopeOverlay",
 }
 
+const PERSONNEL_OVERLAY_NODES := {
+	"labor_worker": &"HumanExtractionOverlay",
+	"lab_manager": &"HumanMicroscopeOverlay",
+}
+
 const STATION_BUTTONS := {
 	"extraction": &"StationButtons/ExtractionButton",
 	"drying": &"StationButtons/OvenButton",
@@ -54,6 +59,8 @@ const STATION_OVERLAY_IDLE := Color(1.0, 1.0, 1.0, 1.0)
 
 var _button_tweens: Dictionary = {}
 var _button_states: Dictionary = {}
+var _personnel_tweens: Dictionary = {}
+var _personnel_energy_blocked: bool = false
 var _automation_tick: float = 0.0
 var _auto_contract_tick: float = 0.0
 var _auto_truck_tick: float = 0.0
@@ -63,13 +70,18 @@ var _truck_overlay_tween: Tween = null
 
 
 func _ready() -> void:
+	add_to_group("laboratory_room")
 	_hide_drawn_art()
 	_add_truck_overlay_button()
 	_refresh_device_overlays()
+	_refresh_personnel_overlays()
 	_connect_station_buttons()
 	GameManager.device_changed.connect(_on_device_changed)
+	GameManager.personnel_changed.connect(_on_personnel_changed)
+	GameManager.energy_changed.connect(_refresh_personnel_overlays)
 	GameManager.shipping_changed.connect(_refresh_truck_overlay_button)
 	GameManager.start_run()
+	_refresh_personnel_overlays()
 
 
 func _process(delta: float) -> void:
@@ -118,6 +130,14 @@ func spawn_contract_batch(contract: Dictionary) -> int:
 	return accepted
 
 
+func return_part_to_drop_area(part: Part) -> void:
+	if part == null:
+		return
+	part.reset_to_incoming()
+	GameManager.update_queue_stage(part.order.order_id, "Revision returned")
+	part.drop_to(_incoming_pad.global_position)
+
+
 func cancel_contract_order(order_id: String) -> bool:
 	for station in get_tree().get_nodes_in_group("work_station"):
 		if station is WorkStation and station.remove_order(order_id):
@@ -146,6 +166,10 @@ func _spawn_order(order: PartOrder) -> void:
 func _run_personnel_routing() -> void:
 	if GameManager.game_layer != GameManager.GameLayer.LAB:
 		return
+	if not GameManager.has_energy(1):
+		_set_personnel_energy_blocked(true)
+		return
+	_set_personnel_energy_blocked(false)
 	var labor_level := GameManager.get_personnel_level("labor_worker") if GameManager.is_personnel_employed("labor_worker") else 0
 	var manager_level := GameManager.get_personnel_level("lab_manager") if GameManager.is_personnel_employed("lab_manager") else 0
 	if labor_level >= 1 or manager_level >= 2:
@@ -165,6 +189,8 @@ func _run_personnel_routing() -> void:
 func _try_auto_accept_contract() -> void:
 	if not GameManager.is_personnel_employed("lab_manager") or GameManager.get_personnel_level("lab_manager") < 1:
 		return
+	if not GameManager.has_energy(1):
+		return
 	if GameManager.get_manufacturing_free_slots() <= 0:
 		return
 	GameManager.refresh_contract_offers(false)
@@ -177,15 +203,16 @@ func _try_auto_accept_contract() -> void:
 	)
 	for offer in offers:
 		var batch_size := int(offer.get("batch_size", 1))
-		var cost := int(offer.get("manufacture_cost", 0)) * batch_size
 		if batch_size > GameManager.get_manufacturing_free_slots():
 			continue
-		if GameManager.player_money < cost:
+		if not GameManager.can_accept_contract_offer(offer):
 			continue
+		if not GameManager.spend_energy(1):
+			return
 		var accepted := GameManager.accept_contract_offer(str(offer.get("offer_id", "")))
 		if accepted.is_empty():
 			continue
-		if not GameManager.pay_manufacture_cost(cost):
+		if not GameManager.reserve_contract_offer(accepted):
 			GameManager.refresh_contract_offers(true)
 			return
 		var spawned := spawn_contract_batch(accepted)
@@ -198,6 +225,8 @@ func _try_auto_send_truck() -> void:
 	if not GameManager.is_personnel_employed("lab_manager") or GameManager.get_personnel_level("lab_manager") < 3:
 		return
 	if GameManager.get_staged_report_count() <= 0:
+		return
+	if not GameManager.spend_energy(1):
 		return
 	GameManager.send_truck()
 
@@ -342,12 +371,16 @@ func _try_route_ready_station(from_kind: WorkStation.Kind, target_kind: WorkStat
 	var target_station := _station_for_kind(target_kind)
 	if from_station == null or target_station == null or not from_station.can_pick_up():
 		return false
+	if not GameManager.has_energy(1):
+		return false
 	var part := from_station.pick_up()
 	return _move_part_to_station(part, target_station)
 
 
 func _move_part_to_station(part: Part, station: WorkStation) -> bool:
 	if part == null or station == null or not station.can_accept_part(part):
+		return false
+	if not GameManager.spend_energy(1):
 		return false
 	var from_pos := part.global_position
 	if not station.try_accept_part(part):
@@ -380,6 +413,10 @@ func _on_device_changed(_device_key: String) -> void:
 	_refresh_device_overlays()
 
 
+func _on_personnel_changed(_personnel_key: String) -> void:
+	_refresh_personnel_overlays()
+
+
 func _refresh_device_overlays() -> void:
 	for device_key in DEVICE_OVERLAY_NODES:
 		var node := get_node_or_null(NodePath(DEVICE_OVERLAY_NODES[device_key]))
@@ -389,6 +426,61 @@ func _refresh_device_overlays() -> void:
 		var button := get_node_or_null(NodePath(STATION_BUTTONS[device_key])) as TextureButton
 		if button:
 			button.visible = GameManager.is_device_owned(device_key)
+
+
+func _refresh_personnel_overlays() -> void:
+	var blocked := _has_employed_personnel() and not GameManager.has_energy(1)
+	_set_personnel_energy_blocked(blocked)
+	for personnel_key in PERSONNEL_OVERLAY_NODES:
+		var node := get_node_or_null(NodePath(PERSONNEL_OVERLAY_NODES[personnel_key]))
+		if node is CanvasItem:
+			(node as CanvasItem).visible = GameManager.is_personnel_employed(personnel_key)
+			_apply_personnel_overlay_state(personnel_key, node as CanvasItem, blocked)
+
+
+func _has_employed_personnel() -> bool:
+	for personnel_key in PERSONNEL_OVERLAY_NODES:
+		if GameManager.is_personnel_employed(personnel_key):
+			return true
+	return false
+
+
+func _set_personnel_energy_blocked(blocked: bool) -> void:
+	if _personnel_energy_blocked == blocked:
+		return
+	_personnel_energy_blocked = blocked
+	for personnel_key in PERSONNEL_OVERLAY_NODES:
+		var node := get_node_or_null(NodePath(PERSONNEL_OVERLAY_NODES[personnel_key]))
+		if node is CanvasItem:
+			_apply_personnel_overlay_state(personnel_key, node as CanvasItem, blocked)
+
+
+func _apply_personnel_overlay_state(personnel_key: String, node: CanvasItem, blocked: bool) -> void:
+	var employed := GameManager.is_personnel_employed(personnel_key)
+	if not employed:
+		node.modulate = Color.WHITE
+		_stop_personnel_tween(personnel_key)
+		return
+	if not blocked:
+		node.modulate = Color.WHITE
+		_stop_personnel_tween(personnel_key)
+		return
+	if _personnel_tweens.has(personnel_key):
+		return
+	node.modulate = Color(1.0, 0.38, 0.34, 0.92)
+	var tween := create_tween().set_loops()
+	tween.tween_property(node, "modulate", Color(1.0, 0.2, 0.16, 0.58), 0.45)
+	tween.tween_property(node, "modulate", Color(1.0, 0.42, 0.36, 0.96), 0.45)
+	_personnel_tweens[personnel_key] = tween
+
+
+func _stop_personnel_tween(personnel_key: String) -> void:
+	if not _personnel_tweens.has(personnel_key):
+		return
+	var tween := _personnel_tweens[personnel_key] as Tween
+	if tween:
+		tween.kill()
+	_personnel_tweens.erase(personnel_key)
 
 
 func _connect_station_buttons() -> void:

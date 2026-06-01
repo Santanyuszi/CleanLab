@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://labshell001"]
+[gd_scene load_steps=10 format=3 uid="uid://labshell001"]
 
 [ext_resource type="Script" path="res://scripts/ui/LabShell.gd" id="1_shell"]
 [ext_resource type="Script" path="res://scripts/ui/HeaderBar.gd" id="2_header"]
@@ -9,7 +9,6 @@
 [ext_resource type="PackedScene" uid="uid://labroom001" path="res://scenes/laboratory/LaboratoryRoom.tscn" id="8_lab"]
 [ext_resource type="PackedScene" uid="uid://particlespot001" path="res://scenes/minigames/ParticleSpot.tscn" id="9_spot"]
 [ext_resource type="PackedScene" uid="uid://problempopup001" path="res://minigames/ProblemInspectionPopup.tscn" id="10_popup"]
-[ext_resource type="Script" path="res://scripts/ui/EscalationPanel.gd" id="11_escalation"]
 
 [node name="LabShell" type="Control"]
 layout_mode = 3
@@ -260,44 +259,6 @@ show_percentage = false
 [node name="TimerLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/StorageRow/RowMargin/RowVBox"]
 layout_mode = 2
 
-[node name="EscalationRow" type="PanelContainer" parent="VBox/MiddleRow/StationSidebar/Margin/VBox"]
-layout_mode = 2
-script = ExtResource("4_row")
-
-[node name="RowMargin" type="MarginContainer" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow"]
-layout_mode = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 6
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 6
-
-[node name="RowVBox" type="VBoxContainer" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin"]
-layout_mode = 2
-
-[node name="TitleHBox" type="HBoxContainer" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox"]
-layout_mode = 2
-
-[node name="TitleLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox/TitleHBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Escalation"
-
-[node name="LevelLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox/TitleHBox"]
-layout_mode = 2
-text = "Lv 2"
-
-[node name="StatusLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox"]
-layout_mode = 2
-text = "New Ticket"
-
-[node name="ProgressBar" type="ProgressBar" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox"]
-layout_mode = 2
-max_value = 1.0
-show_percentage = false
-
-[node name="TimerLabel" type="Label" parent="VBox/MiddleRow/StationSidebar/Margin/VBox/EscalationRow/RowMargin/RowVBox"]
-layout_mode = 2
-
 [node name="BottomRow" type="HBoxContainer" parent="VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 150)
@@ -405,7 +366,7 @@ color = Color(0.94902, 0.976471, 0.972549, 1)
 [node name="PromptLabel" type="Label" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Tap particle to classify"
+text = "Revision needed"
 horizontal_alignment = 1
 
 [node name="Bottom" type="VBoxContainer" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox"]
@@ -418,31 +379,34 @@ theme_override_constants/separation = 6
 [node name="ClassBtn0" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Metallic (M)"
+text = "YES"
 
 [node name="ClassBtn1" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Fiber (F)"
+text = "NO"
 
 [node name="ClassBtn2" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow"]
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Non-metal (N)"
+text = ""
 
 [node name="ClassRow2" type="HBoxContainer" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom"]
 layout_mode = 2
 theme_override_constants/separation = 6
 
 [node name="ClassBtn3" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow2"]
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Ignore (I)"
+text = ""
 
 [node name="ClassBtn4" type="Button" parent="VBox/BottomRow/MicroscopeDock/Margin/VBox/Bottom/ClassRow2"]
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
-text = "SEM/FTIR (S)"
+text = ""
 
 [node name="StatusBar" type="PanelContainer" parent="VBox"]
 unique_name_in_owner = true
@@ -480,6 +444,13 @@ layout_mode = 2
 custom_minimum_size = Vector2(145, 0)
 text = "XP: 0"
 
+[node name="EnergyLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(135, 0)
+theme_override_colors/font_color = Color(0.192157, 0.384314, 0.388235, 1)
+text = "Energy: 30"
+
 [node name="MoneyLabel" type="Label" parent="VBox/StatusBar/Margin/HBox"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -502,15 +473,3 @@ custom_minimum_size = Vector2(0, 0)
 text = "Day 1"
 
 [node name="ProblemInspectionPopup" parent="." instance=ExtResource("10_popup")]
-
-[node name="EscalationPanel" type="PanelContainer" parent="."]
-layout_mode = 1
-anchors_preset = 10
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -360.0
-offset_top = 88.0
-offset_right = -18.0
-offset_bottom = 236.0
-grow_horizontal = 0
-script = ExtResource("11_escalation")

@@ -33,7 +33,6 @@ var _selected: ParticleSpot = null
 var _classified_count: int = 0
 var _correct_count: int = 0
 var _wrong_count: int = 0
-var _ftir_flags: int = 0
 var _class_counts: Dictionary = {}
 var _speed_samples: Array[float] = []
 var _swipe_start: Vector2 = Vector2.ZERO
@@ -89,9 +88,9 @@ func _try_swipe_classify(end_pos: Vector2) -> void:
 		return
 	var chosen: ParticleTypes.Class
 	if absf(delta.y) >= absf(delta.x):
-		chosen = ParticleTypes.Class.METALLIC if delta.y < 0.0 else ParticleTypes.Class.IGNORE
+		chosen = ParticleTypes.Class.METALLIC_SHINY if delta.y < 0.0 else ParticleTypes.Class.REGULAR
 	else:
-		chosen = ParticleTypes.Class.FIBER if delta.x < 0.0 else ParticleTypes.Class.NON_METALLIC
+		chosen = ParticleTypes.Class.FIBER if delta.x < 0.0 else ParticleTypes.Class.SHINY_FIBER
 	_submit_classification(chosen)
 
 
@@ -124,7 +123,6 @@ func _start_session_async() -> void:
 	_classified_count = 0
 	_correct_count = 0
 	_wrong_count = 0
-	_ftir_flags = 0
 	_class_counts = {
 		"metallic": 0,
 		"fiber": 0,
@@ -148,7 +146,7 @@ func _spawn_particles() -> void:
 	for i in particle_count:
 		var spot: ParticleSpot = particle_scene.instantiate()
 		_particle_field.add_child(spot)
-		var p_class := randi() % 5 as ParticleTypes.Class
+		var p_class := randi() % 4 as ParticleTypes.Class
 		var local_pos := Vector2(
 			randf_range(margin, field_size.x - margin),
 			randf_range(margin, field_size.y - margin)
@@ -192,8 +190,6 @@ func _submit_classification(chosen: ParticleTypes.Class) -> void:
 		_combo = minf(_combo + COMBO_STEP, 3.5)
 		GameManager.apply_reputation_delta(CORRECT_REPUTATION)
 		TouchInput.vibrate_feedback(20)
-		if chosen == ParticleTypes.Class.FTIR_REQUIRED:
-			_ftir_flags += 1
 	else:
 		_wrong_count += 1
 		_combo = 1.0
@@ -224,12 +220,11 @@ func _finish_session() -> void:
 		avg_speed = sum / _speed_samples.size()
 
 	var summary := {
-		"score": _score,
-		"accuracy": accuracy,
-		"avg_speed": avg_speed,
-		"ftir_flags": _ftir_flags,
-		"wrong": _wrong_count,
-		"classified": _classified_count,
+			"score": _score,
+			"accuracy": accuracy,
+			"avg_speed": avg_speed,
+			"wrong": _wrong_count,
+			"classified": _classified_count,
 		"class_counts": _class_counts.duplicate(true),
 	}
 
@@ -247,24 +242,26 @@ func _finish_session() -> void:
 
 func _track_correct_class(chosen: ParticleTypes.Class) -> void:
 	match chosen:
-		ParticleTypes.Class.METALLIC:
+		ParticleTypes.Class.METALLIC_SHINY:
 			_class_counts["metallic"] = int(_class_counts.get("metallic", 0)) + 1
 		ParticleTypes.Class.FIBER:
 			_class_counts["fiber"] = int(_class_counts.get("fiber", 0)) + 1
-		ParticleTypes.Class.NON_METALLIC:
+		ParticleTypes.Class.SHINY_FIBER:
+			_class_counts["metallic"] = int(_class_counts.get("metallic", 0)) + 1
+			_class_counts["fiber"] = int(_class_counts.get("fiber", 0)) + 1
+		ParticleTypes.Class.REGULAR:
 			_class_counts["non_metallic"] = int(_class_counts.get("non_metallic", 0)) + 1
 
 
 func _show_results(summary: Dictionary) -> void:
 	_results_panel.visible = true
 	_results_label.text = (
-		"Inspection complete\nScore: %d  ·  Accuracy: %d%%\n+%d XP  ·  +%d credits\nEscalation risk: %.0f%%\nResolve tickets to lower risk."
+		"Inspection complete\nScore: %d  ·  Accuracy: %d%%\n+%d XP  ·  +%d credits"
 		% [
 			summary.score,
 			int(summary.accuracy * 100.0),
 			floori(summary.score / 8.0) + int(summary.accuracy * 20.0),
 			floori(summary.score / 4.0),
-			GameManager.escalation_risk * 100.0,
 		]
 	)
 

@@ -188,10 +188,16 @@ func resume_after_inspection(passed: bool) -> void:
 	var inspected_part := held_part
 	if not passed:
 		GameManager.apply_inspection_penalty()
-		_part_timers[inspected_part.order.order_id] = float(_part_durations.get(inspected_part.order.order_id, _process_duration)) * 0.5
-		_part_states[inspected_part.order.order_id] = SlotState.PROCESSING
-		_refresh_aggregate_state()
-		_set_status("Re-analysis...")
+		_remove_part(inspected_part)
+		inspected_part.is_on_station = false
+		var lab := get_tree().get_first_node_in_group("laboratory_room")
+		if lab and lab.has_method("return_part_to_drop_area"):
+			lab.call("return_part_to_drop_area", inspected_part)
+		else:
+			inspected_part.reset_to_incoming()
+		_set_status("Tap to start" if held_parts.is_empty() else "Processing...")
+		_set_platform_color(Color(0.62, 0.28, 0.2))
+		_emit_status()
 		return
 	_finish_microscope_part(inspected_part)
 	part_ready.emit(self)

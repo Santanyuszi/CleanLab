@@ -8,11 +8,19 @@ var placed: bool = false
 
 var _dragging := false
 var _grab_offset := Vector2.ZERO
+var _texture: Texture2D = null
+var _texture_region := Rect2()
 
 
-func setup(p_class: int, local_pos: Vector2) -> void:
+func setup(p_class: int, local_pos: Vector2, texture: Texture2D = null, texture_region: Rect2 = Rect2()) -> void:
 	true_class = p_class
-	size = Vector2(56, 56)
+	_texture = texture
+	_texture_region = texture_region
+	if _texture and _texture_region.size.x > 0.0:
+		var token_width := 132.0
+		size = Vector2(token_width, token_width * _texture_region.size.y / _texture_region.size.x)
+	else:
+		size = Vector2(56, 56)
 	custom_minimum_size = size
 	position = local_pos - size * 0.5
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -53,6 +61,9 @@ func mark_placed(ok: bool) -> void:
 
 
 func _draw() -> void:
+	if _texture:
+		draw_texture_rect_region(_texture, Rect2(Vector2.ZERO, size), _texture_region)
+		return
 	var is_fiber := true_class == 2 or true_class == 3
 	var is_shiny := true_class == 1 or true_class == 3
 	var black := Color(0.015, 0.015, 0.014, 1.0)
