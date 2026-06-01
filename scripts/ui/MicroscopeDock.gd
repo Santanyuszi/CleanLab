@@ -93,6 +93,7 @@ func _on_particle_tapped(spot: ParticleSpot) -> void:
 
 func _on_class_pressed(class_id: int) -> void:
 	if not _active or _selected == null:
+		_prompt.text = "Select a particle before classifying."
 		return
 	var chosen: ParticleTypes.Class = class_id as ParticleTypes.Class
 	var ok: bool = _selected.true_class == chosen
@@ -100,9 +101,11 @@ func _on_class_pressed(class_id: int) -> void:
 		_correct += 1
 		_score_val += int(80 * _combo_val)
 		_combo_val = minf(_combo_val + 0.12, 3.5)
+		_prompt.text = "Correct. Keep the streak alive."
 	else:
 		_wrong += 1
 		_combo_val = 1.0
+		_prompt.text = "Incorrect. Next particle can recover accuracy."
 	_selected.mark_classified()
 	_selected = null
 	_refresh_stats()
@@ -122,6 +125,10 @@ func _finish() -> void:
 		"classified": _correct,
 	}
 	GameManager.apply_microscopy_results(summary)
+	if _wrong > 0:
+		_prompt.text = "Session complete. Check escalation desk for follow-up."
+	else:
+		_prompt.text = "Session complete. Report staged automatically when possible."
 	var microscope: WorkStation = null
 	for node in get_tree().get_nodes_in_group("work_station"):
 		var s: WorkStation = node as WorkStation

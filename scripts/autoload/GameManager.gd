@@ -7,9 +7,17 @@ enum GameLayer {
 	PROBLEM_INSPECTION,
 }
 
+enum ManagementPhase {
+	WAITING_FOR_INCOMING,
+	PIPELINE_ACTIVE,
+	MICROSCOPE_ACTIVE,
+}
+
 const MINIGAME_PROBLEM_CHANCE: float = 0.0
+const SAVE_PATH := "user://cleanlab_save_v1.json"
 
 var game_layer: GameLayer = GameLayer.LAB
+var management_phase: ManagementPhase = ManagementPhase.WAITING_FOR_INCOMING
 var player_money: int = 220
 var player_xp: int = 0
 var player_xp_to_next: int = 140
@@ -26,6 +34,7 @@ var pending_ftir_count: int = 0
 var sample_queue: Array[Dictionary] = []
 var staged_reports: Array[Dictionary] = []
 var contract_offers: Array[Dictionary] = []
+var escalation_tickets: Array[Dictionary] = []
 
 const MAX_DEVICE_LEVEL := 10
 const CONTRACT_BREAK_SATISFACTION := 25.0
@@ -320,6 +329,7 @@ var personnel_employed: Dictionary = {
 }
 
 signal layer_changed(layer: GameLayer)
+signal management_phase_changed(phase: ManagementPhase)
 signal economy_changed
 signal sample_queue_changed
 signal device_changed(device_key: String)
@@ -335,13 +345,24 @@ signal contract_offers_changed
 signal contract_accepted(contract: Dictionary)
 signal contract_cancelled(order_id: String)
 signal station_completed(device_key: String)
+signal microscope_minigame_requested(sample: Node)
+signal escalation_queue_changed
 
 
-func start_run() -> void:
+func _ready() -> void:
+	randomize()
+
+
+func start_run(force_reset: bool = false) -> void:
+	if not force_reset and load_progress():
+		refresh_contract_offers(false)
+		return
 	game_layer = GameLayer.LAB
+	management_phase = ManagementPhase.WAITING_FOR_INCOMING
 	sample_queue.clear()
 	staged_reports.clear()
 	contract_offers.clear()
+	escalation_tickets.clear()
 	samples_in_lab = 0
 	player_money = 220
 	player_xp = 0
@@ -374,12 +395,64 @@ func start_run() -> void:
 		"lab_manager": false,
 	}
 	layer_changed.emit(game_layer)
+	management_phase_changed.emit(management_phase)
 	economy_changed.emit()
 	sample_queue_changed.emit()
 	shipping_changed.emit()
+	escalation_queue_changed.emit()
 	if has_node("/root/AchievementManager"):
 		AchievementManager.reset()
 	refresh_contract_offers(true)
+	save_progress()
+
+
+func start_prototype_run() -> void:
+	start_run(false)
+	set_management_phase(ManagementPhase.WAITING_FOR_INCOMING)
+
+
+func set_management_phase(phase: ManagementPhase) -> void:
+	if management_phase == phase:
+		return
+	management_phase = phase
+	management_phase_changed.emit(management_phase)
+
+
+func register_incoming_sample(_sample: Node) -> void:
+	if management_phase != ManagementPhase.PIPELINE_ACTIVE:
+		set_management_phase(ManagementPhase.WAITING_FOR_INCOMING)
+
+
+func notify_station_processing_started(_station_type: String) -> void:
+	if management_phase != ManagementPhase.MICROSCOPE_ACTIVE:
+		set_management_phase(ManagementPhase.PIPELINE_ACTIVE)
+
+
+func notify_station_processing_complete(station_type: String) -> void:
+	if station_type == "microscope":
+		set_management_phase(ManagementPhase.MICROSCOPE_ACTIVE)
+
+
+func request_microscope_minigame(sample: Node) -> void:
+	if sample == null:
+		return
+	set_management_phase(ManagementPhase.MICROSCOPE_ACTIVE)
+	var connections := get_signal_connection_list("microscope_minigame_requested")
+	if connections.is_empty():
+		apply_microscopy_results({
+			"score": 90,
+			"accuracy": 0.78,
+			"avg_speed": 1.7,
+			"ftir_flags": 0,
+			"wrong": 0,
+			"classified": 1,
+		})
+		return
+	microscope_minigame_requested.emit(sample)
+
+
+func apply_reputation_delta(delta: float) -> void:
+	update_reputation(delta)
 
 
 func get_time_string() -> String:
@@ -470,6 +543,7 @@ func upgrade_personnel(personnel_key: String) -> bool:
 	personnel_levels[personnel_key] = level + 1
 	economy_changed.emit()
 	personnel_changed.emit(personnel_key)
+	save_progress()
 	return true
 
 
@@ -487,6 +561,7 @@ func employ_personnel(personnel_key: String) -> bool:
 	personnel_employed[personnel_key] = true
 	economy_changed.emit()
 	personnel_changed.emit(personnel_key)
+	save_progress()
 	return true
 
 
@@ -495,6 +570,7 @@ func fire_personnel(personnel_key: String) -> bool:
 		return false
 	personnel_employed[personnel_key] = false
 	personnel_changed.emit(personnel_key)
+	save_progress()
 	return true
 
 
@@ -559,6 +635,7 @@ func refresh_contract_offers(force: bool = false) -> void:
 		changed = true
 	if changed:
 		contract_offers_changed.emit()
+		save_progress()
 
 
 func get_contract_offers() -> Array[Dictionary]:
@@ -656,11 +733,65 @@ func get_manufacturing_free_slots() -> int:
 	return maxi(get_manufacturing_buffer_capacity() - samples_in_lab, 0)
 
 
+func get_escalation_tickets() -> Array[Dictionary]:
+	return escalation_tickets.duplicate(true)
+
+
+func get_next_escalation_ticket() -> Dictionary:
+	if escalation_tickets.is_empty():
+		return {}
+	return escalation_tickets[0].duplicate(true)
+
+
+func queue_escalation_ticket(title: String, severity: int, reward: int, penalty: float) -> Dictionary:
+	var ticket := {
+		"id": "ESC-%d-%03d" % [Time.get_ticks_msec(), randi_range(1, 999)],
+		"title": title,
+		"severity": clampi(severity, 1, 4),
+		"reward": maxi(reward, 0),
+		"penalty": maxf(penalty, 0.0),
+		"created_at_msec": Time.get_ticks_msec(),
+	}
+	escalation_tickets.append(ticket)
+	alert_count = escalation_tickets.size()
+	escalation_risk = clampf(escalation_risk + 0.03 * float(int(ticket.get("severity", 1))), 0.05, 0.98)
+	escalation_queue_changed.emit()
+	economy_changed.emit()
+	save_progress()
+	return ticket.duplicate(true)
+
+
+func resolve_next_escalation(success: bool) -> Dictionary:
+	if escalation_tickets.is_empty():
+		return {}
+	var ticket := escalation_tickets.pop_front()
+	var severity := int(ticket.get("severity", 1))
+	if success:
+		var reward := int(ticket.get("reward", 0))
+		player_money += reward
+		lab_reputation = clampf(lab_reputation + float(severity) * 0.6, 0.0, 100.0)
+		escalation_risk = clampf(escalation_risk - 0.06 * float(severity), 0.02, 0.98)
+		ticket["resolved"] = "success"
+	else:
+		var penalty := float(ticket.get("penalty", 1.0))
+		lab_reputation = clampf(lab_reputation - penalty, 0.0, 100.0)
+		escalation_risk = clampf(escalation_risk + 0.04 * float(severity), 0.02, 0.98)
+		ticket["resolved"] = "failed"
+	alert_count = escalation_tickets.size()
+	_check_contract_breaks()
+	escalation_queue_changed.emit()
+	economy_changed.emit()
+	sample_queue_changed.emit()
+	save_progress()
+	return ticket
+
+
 func update_reputation(delta: float) -> void:
 	lab_reputation = clampf(lab_reputation + delta, 0.0, 100.0)
 	_check_contract_breaks()
 	economy_changed.emit()
 	sample_queue_changed.emit()
+	save_progress()
 
 
 func apply_manufacturing_halt_penalty() -> void:
@@ -690,6 +821,7 @@ func pay_manufacture_cost(amount: int) -> bool:
 		return false
 	player_money -= amount
 	economy_changed.emit()
+	save_progress()
 	return true
 
 
@@ -720,6 +852,7 @@ func purchase_device(device_key: String) -> bool:
 	device_levels[device_key] = max(1, get_device_level(device_key))
 	economy_changed.emit()
 	device_changed.emit(device_key)
+	save_progress()
 	return true
 
 
@@ -738,6 +871,7 @@ func upgrade_device(device_key: String) -> bool:
 	device_levels[device_key] = level + 1
 	economy_changed.emit()
 	device_changed.emit(device_key)
+	save_progress()
 	return true
 
 
@@ -769,6 +903,7 @@ func register_part_in_queue(part: Part) -> void:
 		"broken": false,
 	})
 	sample_queue_changed.emit()
+	save_progress()
 
 
 func update_queue_stage(part_id: String, stage: String) -> void:
@@ -785,6 +920,7 @@ func unregister_part(part_id: String) -> void:
 			break
 	samples_in_lab = maxi(samples_in_lab - 1, 0)
 	sample_queue_changed.emit()
+	save_progress()
 
 
 func cancel_active_contract(order_id: String) -> bool:
@@ -797,6 +933,7 @@ func cancel_active_contract(order_id: String) -> bool:
 		unregister_part(order_id)
 		economy_changed.emit()
 		contract_cancelled.emit(order_id)
+		save_progress()
 		return true
 	return false
 
@@ -817,6 +954,7 @@ func stage_report_for_shipping(part: Part) -> bool:
 	})
 	unregister_part(part.order.order_id)
 	shipping_changed.emit()
+	save_progress()
 	return true
 
 
@@ -846,11 +984,13 @@ func send_truck() -> int:
 	staged_reports.clear()
 	complete_delivery(payout, delivered_reports)
 	shipping_changed.emit()
+	save_progress()
 	return payout
 
 
 func start_microscope_session(part: Part) -> void:
 	game_layer = GameLayer.MICROSCOPY
+	set_management_phase(ManagementPhase.MICROSCOPE_ACTIVE)
 	layer_changed.emit(game_layer)
 	microscope_session_started.emit(part)
 
@@ -883,6 +1023,7 @@ func complete_delivery(payout: int, delivered_reports: Array = []) -> void:
 	sample_queue_changed.emit()
 	delivery_reports_completed.emit(payout, delivered_reports)
 	delivery_completed.emit(payout)
+	save_progress()
 
 
 func _delivery_xp_for_reports(delivered_reports: Array, payout: int) -> int:
@@ -896,6 +1037,7 @@ func _delivery_xp_for_reports(delivered_reports: Array, payout: int) -> int:
 
 
 func _check_contract_breaks() -> void:
+	var raised := false
 	for entry in sample_queue:
 		if bool(entry.get("broken", false)):
 			continue
@@ -903,7 +1045,9 @@ func _check_contract_breaks() -> void:
 		if lab_reputation < required or lab_reputation < CONTRACT_BREAK_SATISFACTION:
 			entry["broken"] = true
 			entry["stage"] = "Contract broken"
-			alert_count += 1
+			raised = true
+	if raised:
+		queue_escalation_ticket("Contract break investigation", 2, 18, 2.0)
 
 
 func _apply_level_progress() -> void:
@@ -923,23 +1067,141 @@ func _xp_required_for_next_level(level: int) -> int:
 
 
 func apply_inspection_penalty() -> void:
-	var penalty := 2.0 if player_level < 4 else 5.0
+	var penalty := 1.5 if player_level < 4 else 3.5
 	lab_reputation = clampf(lab_reputation - penalty, 0.0, 100.0)
-	alert_count += 1
+	queue_escalation_ticket("QC mismatch escalation", 2, 14, penalty)
 	economy_changed.emit()
+	save_progress()
 
 
 func apply_microscopy_results(summary: Dictionary) -> void:
 	var score: int = int(summary.get("score", 0))
 	var accuracy: float = float(summary.get("accuracy", 0.0))
 	var wrong: int = int(summary.get("wrong", 0))
-	player_xp += mini(floori(float(score) / 20.0) + int(accuracy * 8.0), 12)
-	player_money += mini(floori(float(score) / 10.0), 12)
-	lab_reputation = clampf(lab_reputation + (accuracy - 0.5) * 3.0 - float(wrong) * 0.5, 0.0, 100.0)
+	var xp_gain := mini(floori(float(score) / 14.0) + int(accuracy * 14.0), 24)
+	var payout := mini(floori(float(score) / 7.0) + int(accuracy * 4.0), 26)
+	player_xp += xp_gain
+	player_money += payout
+	lab_reputation = clampf(lab_reputation + (accuracy - 0.45) * 4.0 - float(wrong) * 0.35, 0.0, 100.0)
+	if wrong > 0 or accuracy < 0.6:
+		var severity := 1 if accuracy >= 0.55 else 2
+		queue_escalation_ticket("Microscope discrepancy follow-up", severity, 10 + severity * 4, 1.5 + float(severity))
 	_apply_level_progress()
 	_check_contract_breaks()
 	game_layer = GameLayer.LAB
+	set_management_phase(ManagementPhase.WAITING_FOR_INCOMING)
 	layer_changed.emit(game_layer)
 	economy_changed.emit()
 	sample_queue_changed.emit()
 	microscopy_results_applied.emit(summary)
+	save_progress()
+
+
+func save_progress() -> bool:
+	var payload := {
+		"player_money": player_money,
+		"player_xp": player_xp,
+		"player_xp_to_next": player_xp_to_next,
+		"player_level": player_level,
+		"lab_reputation": lab_reputation,
+		"contamination_trend": contamination_trend,
+		"escalation_risk": escalation_risk,
+		"alert_count": alert_count,
+		"samples_in_lab": samples_in_lab,
+		"max_samples_in_lab": max_samples_in_lab,
+		"game_day": game_day,
+		"game_minutes": game_minutes,
+		"pending_ftir_count": pending_ftir_count,
+		"sample_queue": sample_queue.duplicate(true),
+		"staged_reports": staged_reports.duplicate(true),
+		"contract_offers": contract_offers.duplicate(true),
+		"device_levels": device_levels.duplicate(true),
+		"device_owned": device_owned.duplicate(true),
+		"personnel_levels": personnel_levels.duplicate(true),
+		"personnel_employed": personnel_employed.duplicate(true),
+		"escalation_tickets": escalation_tickets.duplicate(true),
+		"game_layer": int(game_layer),
+		"management_phase": int(management_phase),
+	}
+	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(payload))
+	return true
+
+
+func load_progress() -> bool:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return false
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return false
+	var parsed := JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return false
+	var data: Dictionary = parsed
+	player_money = int(data.get("player_money", 220))
+	player_xp = max(0, int(data.get("player_xp", 0)))
+	player_xp_to_next = max(1, int(data.get("player_xp_to_next", _xp_required_for_next_level(1))))
+	player_level = max(1, int(data.get("player_level", 1)))
+	lab_reputation = clampf(float(data.get("lab_reputation", 60.0)), 0.0, 100.0)
+	contamination_trend = clampf(float(data.get("contamination_trend", 0.35)), 0.0, 1.0)
+	escalation_risk = clampf(float(data.get("escalation_risk", 0.45)), 0.02, 0.98)
+	alert_count = max(0, int(data.get("alert_count", 0)))
+	samples_in_lab = max(0, int(data.get("samples_in_lab", 0)))
+	max_samples_in_lab = max(1, int(data.get("max_samples_in_lab", 20)))
+	game_day = max(1, int(data.get("game_day", 1)))
+	game_minutes = max(0, int(data.get("game_minutes", 480)))
+	pending_ftir_count = max(0, int(data.get("pending_ftir_count", 0)))
+	sample_queue = _as_dictionary_array(data.get("sample_queue", []))
+	staged_reports = _as_dictionary_array(data.get("staged_reports", []))
+	contract_offers = _as_dictionary_array(data.get("contract_offers", []))
+	escalation_tickets = _as_dictionary_array(data.get("escalation_tickets", []))
+	device_levels = (data.get("device_levels", device_levels) as Dictionary).duplicate(true)
+	device_owned = (data.get("device_owned", device_owned) as Dictionary).duplicate(true)
+	personnel_levels = (data.get("personnel_levels", personnel_levels) as Dictionary).duplicate(true)
+	personnel_employed = (data.get("personnel_employed", personnel_employed) as Dictionary).duplicate(true)
+	game_layer = clampi(int(data.get("game_layer", int(GameLayer.LAB))), int(GameLayer.LAB), int(GameLayer.PROBLEM_INSPECTION))
+	management_phase = clampi(
+		int(data.get("management_phase", int(ManagementPhase.WAITING_FOR_INCOMING))),
+		int(ManagementPhase.WAITING_FOR_INCOMING),
+		int(ManagementPhase.MICROSCOPE_ACTIVE)
+	)
+	_sanitize_progression_state()
+	layer_changed.emit(game_layer)
+	management_phase_changed.emit(management_phase)
+	economy_changed.emit()
+	sample_queue_changed.emit()
+	shipping_changed.emit()
+	escalation_queue_changed.emit()
+	return true
+
+
+func _as_dictionary_array(value: Variant) -> Array[Dictionary]:
+	var output: Array[Dictionary] = []
+	if typeof(value) != TYPE_ARRAY:
+		return output
+	for entry in value:
+		if typeof(entry) == TYPE_DICTIONARY:
+			output.append((entry as Dictionary).duplicate(true))
+	return output
+
+
+func _sanitize_progression_state() -> void:
+	for key in DEVICE_CATALOG.keys():
+		if not device_levels.has(key):
+			device_levels[key] = 1
+		device_levels[key] = clampi(int(device_levels[key]), 1, get_device_max_level(str(key)))
+		if not device_owned.has(key):
+			device_owned[key] = key in ["extraction", "drying", "microscope", "truck"]
+	for key in PERSONNEL_CATALOG.keys():
+		if not personnel_levels.has(key):
+			personnel_levels[key] = 0
+		if not personnel_employed.has(key):
+			personnel_employed[key] = false
+		var max_level := get_personnel_max_level(str(key))
+		personnel_levels[key] = clampi(int(personnel_levels[key]), 0, max_level)
+		if int(personnel_levels[key]) <= 0:
+			personnel_employed[key] = false
+	samples_in_lab = sample_queue.size()
+	alert_count = escalation_tickets.size()
