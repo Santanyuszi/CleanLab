@@ -37,6 +37,7 @@ func _run_chain(sample: Sample) -> void:
 	await _await_station(_dry, sample)
 	await _tween_sample_to(sample, _microscope)
 	await _await_station(_microscope, sample)
+	GameManager.request_microscope_minigame(sample)
 
 
 func _tween_sample_to(sample: Sample, station: StationBase) -> void:

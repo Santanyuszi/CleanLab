@@ -6,8 +6,8 @@ const BASE_SCORE: int = 80
 const COMBO_STEP: float = 0.12
 const SPEED_BONUS_THRESHOLD: float = 2.0
 const SPEED_BONUS_MULT: float = 1.35
-const WRONG_REPUTATION: float = -3.0
-const CORRECT_REPUTATION: float = 0.6
+const WRONG_REPUTATION: float = -1.0
+const CORRECT_REPUTATION: float = 0.8
 const SWIPE_MIN_DISTANCE: float = 80.0
 
 @export var min_particles_per_session: int = 1
@@ -258,7 +258,7 @@ func _track_correct_class(chosen: ParticleTypes.Class) -> void:
 func _show_results(summary: Dictionary) -> void:
 	_results_panel.visible = true
 	_results_label.text = (
-		"Inspection complete\nScore: %d  ·  Accuracy: %d%%\n+%d XP  ·  +%d credits\nEscalation risk: %.0f%%"
+		"Inspection complete\nScore: %d  ·  Accuracy: %d%%\n+%d XP  ·  +%d credits\nEscalation risk: %.0f%%\nResolve tickets to lower risk."
 		% [
 			summary.score,
 			int(summary.accuracy * 100.0),

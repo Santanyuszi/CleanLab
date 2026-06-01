@@ -19,10 +19,16 @@ func set_hint(text: String) -> void:
 	_hint_label.text = text
 
 
+func set_phase_hint(text: String) -> void:
+	set_hint(text)
+
+
 func _on_layer(layer: GameManager.GameLayer) -> void:
 	match layer:
 		GameManager.GameLayer.LAB:
 			set_hint("Tap the sample, then tap finished stations to advance.")
+		GameManager.GameLayer.MICROSCOPY:
+			set_hint("Microscope active — classify quickly to keep quality high.")
 		GameManager.GameLayer.PROBLEM_INSPECTION:
 			set_hint("QC inspection open — verify the particle.")
 
