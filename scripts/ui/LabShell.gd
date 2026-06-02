@@ -723,7 +723,12 @@ func _layout_microscope_popup() -> void:
 
 	var particle_field := _microscope_dock.get_node_or_null("Margin/VBox/ParticleField") as Control
 	if particle_field:
-		particle_field.custom_minimum_size = Vector2(0, maxf(target_size.y - 286.0, 150.0))
+		particle_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		particle_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		particle_field.custom_minimum_size = Vector2(0, maxf(target_size.y - 142.0, 260.0))
+	var prompt := _microscope_dock.get_node_or_null("Margin/VBox/PromptLabel") as Label
+	if prompt:
+		prompt.custom_minimum_size = Vector2(0, 34)
 
 
 func _contract_grid_columns() -> int:
@@ -1791,14 +1796,9 @@ func _on_contract_selected(contract: Dictionary) -> void:
 		set_hint("Not enough money for manufacturing cost.")
 		GameManager.refresh_contract_offers(true)
 		return
-	var accepted_offer := GameManager.accept_contract_offer(str(contract.get("offer_id", "")))
+	var accepted_offer := GameManager.try_accept_contract_offer(str(contract.get("offer_id", "")))
 	if accepted_offer.is_empty():
-		set_hint("That offer expired or was already taken.")
-		GameManager.refresh_contract_offers(true)
-		_refresh_contracts()
-		return
-	if not GameManager.reserve_contract_offer(accepted_offer):
-		set_hint("Could not reserve entry buffer for that offer.")
+		set_hint("That offer expired, was already taken, or cannot fit right now.")
 		GameManager.refresh_contract_offers(true)
 		_refresh_contracts()
 		return
@@ -1806,6 +1806,12 @@ func _on_contract_selected(contract: Dictionary) -> void:
 	var spawned := 0
 	if lab and lab.has_method("spawn_contract_batch"):
 		spawned = int(lab.spawn_contract_batch(accepted_offer))
+	if spawned <= 0:
+		GameManager.refund_contract_acceptance(accepted_offer)
+		set_hint("Could not place the samples in the lab. Try again.")
+		GameManager.refresh_contract_offers(true)
+		_refresh_contracts()
+		return
 	if spawned > 0:
 		GameManager.record_contract_accepted(accepted_offer)
 	set_hint("%s accepted. %d batch queued. Manufacturing cost: $%s." % [

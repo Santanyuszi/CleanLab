@@ -207,17 +207,19 @@ func _try_auto_accept_contract() -> void:
 			continue
 		if not GameManager.can_accept_contract_offer(offer):
 			continue
-		if not GameManager.spend_energy(1):
-			return
-		var accepted := GameManager.accept_contract_offer(str(offer.get("offer_id", "")))
+		var accepted := GameManager.try_accept_contract_offer(str(offer.get("offer_id", "")))
 		if accepted.is_empty():
 			continue
-		if not GameManager.reserve_contract_offer(accepted):
+		if not GameManager.spend_energy(1):
+			GameManager.refund_contract_acceptance(accepted)
 			GameManager.refresh_contract_offers(true)
 			return
 		var spawned := spawn_contract_batch(accepted)
-		if spawned > 0:
-			GameManager.record_contract_accepted(accepted)
+		if spawned <= 0:
+			GameManager.refund_contract_acceptance(accepted)
+			GameManager.refresh_contract_offers(true)
+			return
+		GameManager.record_contract_accepted(accepted)
 		return
 
 

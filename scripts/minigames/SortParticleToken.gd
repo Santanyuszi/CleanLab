@@ -16,9 +16,10 @@ func setup(p_class: int, local_pos: Vector2, texture: Texture2D = null, texture_
 	true_class = p_class
 	_texture = texture
 	_texture_region = texture_region
-	if _texture and _texture_region.size.x > 0.0:
+	if _texture:
 		var token_width := 132.0
-		size = Vector2(token_width, token_width * _texture_region.size.y / _texture_region.size.x)
+		var source_size := _texture_region.size if _texture_region.size.x > 0.0 else _texture.get_size()
+		size = Vector2(token_width, token_width * source_size.y / source_size.x)
 	else:
 		size = Vector2(56, 56)
 	custom_minimum_size = size
@@ -62,7 +63,10 @@ func mark_placed(ok: bool) -> void:
 
 func _draw() -> void:
 	if _texture:
-		draw_texture_rect_region(_texture, Rect2(Vector2.ZERO, size), _texture_region)
+		if _texture_region.size.x > 0.0:
+			draw_texture_rect_region(_texture, Rect2(Vector2.ZERO, size), _texture_region)
+		else:
+			draw_texture_rect(_texture, Rect2(Vector2.ZERO, size), false)
 		return
 	var is_fiber := true_class == 2 or true_class == 3
 	var is_shiny := true_class == 1 or true_class == 3

@@ -736,6 +736,35 @@ func accept_contract_offer(offer_id: String) -> Dictionary:
 	return {}
 
 
+func try_accept_contract_offer(offer_id: String) -> Dictionary:
+	refresh_contract_offers(false)
+	for i in contract_offers.size():
+		if str(contract_offers[i].get("offer_id", "")) != offer_id:
+			continue
+		var offer := contract_offers[i].duplicate(true)
+		if not can_accept_contract_offer(offer):
+			return {}
+		var batch_size := int(offer.get("batch_size", 1))
+		var total_cost := int(offer.get("manufacture_cost", 0)) * batch_size
+		player_money -= total_cost
+		contract_offers.remove_at(i)
+		contract_offers_changed.emit()
+		economy_changed.emit()
+		save_progress()
+		return offer
+	return {}
+
+
+func refund_contract_acceptance(contract: Dictionary) -> void:
+	var batch_size := int(contract.get("batch_size", 1))
+	var total_cost := int(contract.get("manufacture_cost", 0)) * batch_size
+	if total_cost <= 0:
+		return
+	player_money += total_cost
+	economy_changed.emit()
+	save_progress()
+
+
 func record_contract_accepted(contract: Dictionary) -> void:
 	contract_accepted.emit(contract.duplicate(true))
 
@@ -1323,7 +1352,13 @@ func load_progress() -> bool:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if file == null:
 		return false
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var text := file.get_as_text()
+	if text.strip_edges().is_empty():
+		return false
+	var json := JSON.new()
+	if json.parse(text) != OK:
+		return false
+	var parsed: Variant = json.data
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
 	var data: Dictionary = parsed
@@ -1358,6 +1393,7 @@ func load_progress() -> bool:
 		int(ManagementPhase.MICROSCOPE_ACTIVE)
 	)
 	_sanitize_progression_state()
+	_clear_unspawned_in_progress_samples()
 	_sync_energy_max(false)
 	_apply_offline_energy_recharge()
 	layer_changed.emit(game_layer)
@@ -1367,6 +1403,7 @@ func load_progress() -> bool:
 	shipping_changed.emit()
 	energy_changed.emit()
 	challenges_changed.emit()
+	save_progress()
 	return true
 
 
@@ -1454,3 +1491,10 @@ func _sanitize_progression_state() -> void:
 		if int(personnel_levels[key]) <= 0:
 			personnel_employed[key] = false
 	samples_in_lab = sample_queue.size()
+
+
+func _clear_unspawned_in_progress_samples() -> void:
+	if sample_queue.is_empty():
+		return
+	sample_queue.clear()
+	samples_in_lab = 0
