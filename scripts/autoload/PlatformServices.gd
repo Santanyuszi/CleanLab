@@ -113,11 +113,12 @@ var _play_games = null
 func _ready() -> void:
 	if Engine.has_singleton("GooglePlayGames"):
 		_play_games = Engine.get_singleton("GooglePlayGames")
+	if is_available():
 		sign_in()
 
 
 func is_available() -> bool:
-	return _play_games != null
+	return _play_games != null and _has_required_methods() and _has_configured_achievement_ids()
 
 
 func sign_in() -> void:
@@ -126,25 +127,45 @@ func sign_in() -> void:
 
 
 func unlock_achievement(local_id: String, tier_key: String) -> void:
+	if not is_available():
+		return
 	var external_id := _external_achievement_id(local_id, tier_key)
 	if external_id.is_empty():
 		return
-	if _play_games != null and _play_games.has_method("unlock_achievement"):
+	if _play_games.has_method("unlock_achievement"):
 		_play_games.unlock_achievement(external_id)
 
 
 func increment_achievement(local_id: String, tier_key: String, amount: int = 1) -> void:
+	if not is_available():
+		return
 	var external_id := _external_achievement_id(local_id, tier_key)
 	if external_id.is_empty():
 		return
-	if _play_games != null and _play_games.has_method("increment_achievement"):
+	if _play_games.has_method("increment_achievement"):
 		_play_games.increment_achievement(external_id, amount)
 
 
 func show_achievements_ui() -> void:
-	if _play_games != null and _play_games.has_method("show_achievements"):
+	if is_available() and _play_games.has_method("show_achievements"):
 		_play_games.show_achievements()
 
 
 func _external_achievement_id(local_id: String, tier_key: String) -> String:
 	return str(GOOGLE_ACHIEVEMENT_IDS.get("%s.%s" % [local_id, tier_key], ""))
+
+
+func _has_required_methods() -> bool:
+	return (
+		_play_games.has_method("sign_in")
+		and _play_games.has_method("unlock_achievement")
+		and _play_games.has_method("increment_achievement")
+		and _play_games.has_method("show_achievements")
+	)
+
+
+func _has_configured_achievement_ids() -> bool:
+	for external_id in GOOGLE_ACHIEVEMENT_IDS.values():
+		if str(external_id).strip_edges().is_empty():
+			return false
+	return true
