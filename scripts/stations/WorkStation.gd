@@ -7,6 +7,8 @@ enum Kind {
 	DRYING,
 	MICROSCOPE,
 	TRUCK,
+	SEM,
+	FTIR,
 }
 
 enum SlotState {
@@ -117,7 +119,7 @@ func try_accept_part(part: Part) -> bool:
 	_set_platform_color(Color(0.12, 0.42, 0.62))
 	_emit_status()
 	if held_part:
-		GameManager.update_queue_stage(held_part.order.order_id, station_title)
+		GameManager.update_queue_for_part(held_part, station_title)
 	return true
 
 
@@ -199,7 +201,15 @@ func resume_after_inspection(passed: bool) -> void:
 		_set_platform_color(Color(0.62, 0.28, 0.2))
 		_emit_status()
 		return
-	_finish_microscope_part(inspected_part)
+	inspected_part.advance_step_after_station(station_kind)
+	_part_states[inspected_part.order.order_id] = SlotState.READY
+	slot_state = SlotState.READY
+	if inspected_part.current_step == Part.Step.REPORT_READY:
+		_set_status("Tap to collect report")
+	else:
+		_set_status("Tap to collect")
+	_set_platform_color(Color(0.18, 0.58, 0.38))
+	GameManager.update_queue_for_part(inspected_part, "Ready")
 	part_ready.emit(self)
 
 
@@ -224,6 +234,17 @@ func _on_timer_finished(part: Part) -> void:
 	if part == null:
 		return
 	if station_kind == Kind.MICROSCOPE:
+		var chance := part.order.problem_chance if part.order != null else GameManager.MINIGAME_PROBLEM_CHANCE
+		if randf() < chance:
+			_part_states[part.order.order_id] = SlotState.AWAITING_INSPECTION
+			held_part = part
+			_refresh_aggregate_state()
+			_set_status("QC problem!")
+			_set_platform_color(Color(0.62, 0.28, 0.55))
+			_emit_status()
+			var claims: Array = _build_inspection_claims()
+			GameManager.enter_problem_inspection(part, claims)
+			return
 		_part_states[part.order.order_id] = SlotState.AWAITING_INSPECTION
 		held_part = part
 		_refresh_aggregate_state()
@@ -237,6 +258,7 @@ func _on_timer_finished(part: Part) -> void:
 	_set_status("Tap part")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
 	_emit_status()
+	GameManager.update_queue_for_part(part, "Ready")
 	GameManager.record_station_completed(device_key)
 	processing_finished.emit(self)
 	part_ready.emit(self)

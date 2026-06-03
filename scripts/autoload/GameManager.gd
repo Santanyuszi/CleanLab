@@ -1106,22 +1106,40 @@ func register_part_in_queue(part: Part) -> void:
 	samples_in_lab += 1
 	sample_queue.append({
 		"name": part.order.order_id,
-		"part_name": part.order.part_name,
+		"display_name": part.order.display_name,
 		"stage": "Incoming",
-		"priority": "Tier %d" % part.order.tier,
-		"satisfaction_required": part.order.satisfaction_required,
-		"manufacture_cost": part.order.manufacture_cost,
+		"next_step": part.next_station_name(),
 		"payout": part.order.payout,
+		"priority": _priority_for_payout(part.order.payout),
 		"broken": false,
+		"manufacture_cost": part.order.manufacture_cost,
+		"satisfaction_required": part.order.satisfaction_required,
 	})
 	sample_queue_changed.emit()
 	save_progress()
+
+
+func _priority_for_payout(payout: int) -> String:
+	if payout >= 300:
+		return "High"
+	if payout >= 175:
+		return "Medium"
+	return "Low"
 
 
 func update_queue_stage(part_id: String, stage: String) -> void:
 	for entry in sample_queue:
 		if entry.get("name", "") == part_id:
 			entry["stage"] = stage
+	sample_queue_changed.emit()
+
+
+func update_queue_for_part(part: Part, stage: String) -> void:
+	var part_id := part.order.order_id
+	for entry in sample_queue:
+		if entry.get("name", "") == part_id:
+			entry["stage"] = stage
+			entry["next_step"] = part.next_station_name()
 	sample_queue_changed.emit()
 
 
@@ -1290,6 +1308,11 @@ func apply_inspection_penalty() -> void:
 	lab_reputation = clampf(lab_reputation - penalty, 0.0, 100.0)
 	economy_changed.emit()
 	save_progress()
+
+
+func apply_reputation_delta(delta: float) -> void:
+	lab_reputation = clampf(lab_reputation + delta, 0.0, 100.0)
+	economy_changed.emit()
 
 
 func apply_microscopy_results(summary: Dictionary) -> void:

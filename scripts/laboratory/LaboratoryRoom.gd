@@ -57,6 +57,7 @@ const STATION_OVERLAY_IDLE := Color(1.0, 1.0, 1.0, 1.0)
 
 @onready var _incoming_pad: Marker2D = %IncomingPad
 
+var _order_counter: int = 0
 var _button_tweens: Dictionary = {}
 var _button_states: Dictionary = {}
 var _personnel_tweens: Dictionary = {}
@@ -149,6 +150,13 @@ func cancel_contract_order(order_id: String) -> bool:
 			GameManager.cancel_active_contract(order_id)
 			return true
 	return false
+
+
+func _spawn_next_order() -> void:
+	_order_counter += 1
+	var order_id := "PRT-%03d" % _order_counter
+	var order := JobCatalog.random_order(GameManager.player_level, order_id)
+	_spawn_order(order)
 
 
 func _spawn_order(order: PartOrder) -> void:

@@ -112,20 +112,13 @@ func _route_part(part: Part, already_claimed: bool = false) -> void:
 			_play_claim_sfx()
 		part.global_position = from_pos
 		_tween_part_to(part, station.get_slot_global_position())
-		_hint("%s started." % station.station_title)
+		_hint(_drag_hint_for(part))
 
 
 func _next_station_for(part: Part) -> WorkStation:
-	var target_kind: WorkStation.Kind
-	match part.current_step:
-		Part.Step.INCOMING:
-			target_kind = WorkStation.Kind.EXTRACTION
-		Part.Step.EXTRACTED:
-			target_kind = WorkStation.Kind.DRYING
-		Part.Step.DRIED:
-			target_kind = WorkStation.Kind.MICROSCOPE
-		_:
-			return null
+	var target_kind := part.next_required_station_kind()
+	if target_kind < 0:
+		return null
 	for node in get_tree().get_nodes_in_group("work_station"):
 		var station := node as WorkStation
 		if station and station.station_kind == target_kind:
@@ -165,6 +158,13 @@ func _station_at(world: Vector2) -> WorkStation:
 func _hint(text: String) -> void:
 	if _shell:
 		_shell.set_hint(text)
+
+
+func _drag_hint_for(part: Part) -> String:
+	if part.current_step == Part.Step.REPORT_READY:
+		return "%s — drag the report to the Truck Dock." % part.order.display_name
+	var destination := part.next_station_name()
+	return "%s — drag to %s." % [part.order.display_name, destination]
 
 
 func _flash_station_warning(device_key: String) -> void:
