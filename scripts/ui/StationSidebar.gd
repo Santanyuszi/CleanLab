@@ -76,10 +76,13 @@ func _refresh_escalation_row() -> void:
 
 
 func _on_escalation_row_input(event: InputEvent) -> void:
-	if not (event is InputEventMouseButton):
-		return
-	var mouse_event := event as InputEventMouseButton
-	if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
+	var tapped := false
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		tapped = mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT
+	elif event is InputEventScreenTouch:
+		tapped = (event as InputEventScreenTouch).pressed
+	if not tapped:
 		return
 	var resolved := GameManager.resolve_next_escalation(true)
 	if resolved.is_empty():

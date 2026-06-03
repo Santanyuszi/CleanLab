@@ -12,6 +12,7 @@ config_version=5
 
 config/name="CleanLab"
 config/description="Technical cleanliness laboratory simulation"
+config/version="1.0"
 run/main_scene="res://scenes/main/IntroSplash.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
