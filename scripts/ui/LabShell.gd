@@ -30,6 +30,7 @@ const SHOP_POPUP_MAX_SIZE := Vector2(900, 820)
 const ACHIEVEMENT_POPUP_MAX_SIZE := Vector2(1320, 720)
 const MICROSCOPE_POPUP_MAX_SIZE := Vector2(920, 560)
 const ACHIEVEMENT_BADGE_ATLAS_PATH := "res://assets/achievements/Achievements.png"
+const ACHIEVEMENT_COMPOSED_BADGE_PATH := "res://assets/achievements/composed_badges/%s/%s_%s.png"
 const TABLER_ICON_PATH := "res://assets/icons/tabler/%s.svg"
 const ACHIEVEMENT_BADGE_REGIONS := {
 	0: Rect2(0, 0, 297, 423),
@@ -51,7 +52,7 @@ const SHOP_PERSONNEL_IMAGES := {
 
 @onready var _header: HeaderBar = %StatusBar
 @onready var _sidebar: StationSidebar = %StationSidebar
-@onready var _sample_queue: SampleQueuePanel = %SampleQueuePanel
+@onready var _sample_queue: SampleQueuePanel = get_node_or_null("VBox/BottomRow/SampleQueuePanel") as SampleQueuePanel
 @onready var _microscope_dock: MicroscopeDock = %MicroscopeDock
 @onready var _lab_viewport: SubViewport = %LabViewport
 @onready var _bottom_row: HBoxContainer = $VBox/BottomRow
@@ -91,11 +92,12 @@ var _brand_title: Label = null
 var _contract_add_button: Button = null
 var _contract_add_tween: Tween = null
 var _refreshing_contracts: bool = false
+var _last_hint: String = ""
 
 
 func _ready() -> void:
 	add_to_group("lab_shell")
-	_sample_queue.visible = false
+	_remove_sample_queue_panel()
 	_bottom_row.visible = false
 	call_deferred("_remove_right_panel_from_layout")
 	resized.connect(_layout_mobile_shell)
@@ -341,7 +343,7 @@ func _on_menu_challenges_pressed() -> void:
 
 func _on_menu_reports_pressed() -> void:
 	_close_main_menu()
-	set_hint("Reports are staged in Shipping after microscope analysis.")
+	set_hint("QC reports show whether finished parts are clean enough for shipment.")
 
 
 func _on_menu_shop_pressed() -> void:
@@ -593,6 +595,7 @@ func get_lab_root() -> Node2D:
 
 
 func set_hint(text: String) -> void:
+	_last_hint = text
 	if _sample_queue:
 		_sample_queue.set_status_line(text)
 
@@ -817,7 +820,7 @@ func _on_layer_changed(layer: GameManager.GameLayer) -> void:
 
 
 func _on_delivery(payout: int) -> void:
-	set_hint("Truck departed — +$%d. Next sample incoming." % payout)
+	set_hint("Truck departed with finished parts — +$%d." % payout)
 
 
 func _on_problem_inspection(_part: Part, _claims: Array) -> void:
@@ -825,7 +828,7 @@ func _on_problem_inspection(_part: Part, _claims: Array) -> void:
 
 
 func _on_problem_resolved(_part: Part, _passed: bool) -> void:
-	set_hint("QC resolved. Collect report and ship to truck.")
+	set_hint("QC resolved. Load the finished part for shipment.")
 
 
 func _apply_reference_skin() -> void:
@@ -837,7 +840,8 @@ func _apply_reference_skin() -> void:
 	if visual_header:
 		_apply_panel_style(visual_header, Color(WHITE, 0.94), PANEL_BORDER, 0, 1)
 	_apply_panel_style(_header, Color(WHITE, 0.94), PANEL_BORDER, 0, 1)
-	_apply_panel_style(_sample_queue, PANEL_BG, PANEL_BORDER, 8, 1)
+	if _sample_queue:
+		_apply_panel_style(_sample_queue, PANEL_BG, PANEL_BORDER, 8, 1)
 	_apply_panel_style(_microscope_dock, PANEL_BG, PANEL_BORDER, 8, 1)
 	var viewport_panel := get_node_or_null("VBox/MiddleRow/LabViewportContainer") as PanelContainer
 	if viewport_panel:
@@ -860,6 +864,15 @@ func _apply_reference_skin() -> void:
 	_brand_title.position = Vector2(20, 9)
 	_brand_title.size = Vector2(140, 56)
 	add_child(_brand_title)
+
+
+func _remove_sample_queue_panel() -> void:
+	if _sample_queue == null:
+		return
+	if _sample_queue.get_parent():
+		_sample_queue.get_parent().remove_child(_sample_queue)
+	_sample_queue.queue_free()
+	_sample_queue = null
 
 
 func _remove_right_panel_from_layout() -> void:
@@ -1368,25 +1381,38 @@ func _build_achievement_badge(achievement: Dictionary) -> Control:
 
 	var frame := TextureRect.new()
 	frame.custom_minimum_size = Vector2(98, 140)
-	frame.texture = _achievement_badge_frame(int(achievement.get("tier", AchievementManager.Tier.LOCKED)))
+	frame.texture = _achievement_badge_texture(achievement)
 	frame.expand_mode = TextureRect.EXPAND_FIT_HEIGHT_PROPORTIONAL
 	frame.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.add_child(frame)
 
-	var icon_texture := _tabler_texture(str(achievement.get("icon", "award")))
-	if icon_texture:
-		var icon := TextureRect.new()
-		icon.custom_minimum_size = Vector2(44, 44)
-		icon.position = Vector2(27, 28)
-		icon.texture = icon_texture
-		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.modulate = _badge_icon_color(int(achievement.get("tier", AchievementManager.Tier.LOCKED)))
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge.add_child(icon)
-
 	return badge
+
+
+func _achievement_badge_texture(achievement: Dictionary) -> Texture2D:
+	var tier_key := _achievement_tier_key(int(achievement.get("tier", AchievementManager.Tier.LOCKED)))
+	var id := str(achievement.get("id", ""))
+	var path := ACHIEVEMENT_COMPOSED_BADGE_PATH % [tier_key, id, tier_key]
+	if FileAccess.file_exists(path):
+		var image := Image.new()
+		if image.load(ProjectSettings.globalize_path(path)) == OK:
+			return ImageTexture.create_from_image(image)
+	return _achievement_badge_frame(int(achievement.get("tier", AchievementManager.Tier.LOCKED)))
+
+
+func _achievement_tier_key(tier: int) -> String:
+	match tier:
+		AchievementManager.Tier.BRONZE:
+			return "bronze"
+		AchievementManager.Tier.SILVER:
+			return "silver"
+		AchievementManager.Tier.GOLD:
+			return "gold"
+		AchievementManager.Tier.CERTIFIED:
+			return "certified"
+		_:
+			return "locked"
 
 
 func _achievement_badge_frame(tier: int) -> Texture2D:
@@ -2159,9 +2185,9 @@ func _button_style(bg: Color, border: Color) -> StyleBoxFlat:
 func _refresh_shipping() -> void:
 	if _shipping_status == null:
 		return
-	var count := GameManager.get_staged_report_count()
-	_shipping_status.text = "TRUCK READY\n%d / %d REPORTS" % [count, GameManager.get_truck_capacity()]
-	_shipping_payout.text = "PAYMENT $ %s" % _format_money(GameManager.get_staged_report_total())
+	var count := GameManager.get_staged_part_count()
+	_shipping_status.text = "TRUCK READY\n%d / %d PARTS" % [count, GameManager.get_truck_capacity()]
+	_shipping_payout.text = "CUSTOMER PAYMENT $ %s" % _format_money(GameManager.get_staged_part_total())
 	if _send_truck_button:
 		_send_truck_button.disabled = count == 0
 		_send_truck_button.modulate = Color(1.0, 1.0, 1.0, 1.0 if count > 0 else 0.42)
@@ -2172,7 +2198,7 @@ func _on_send_truck_pressed() -> void:
 	if payout > 0:
 		set_hint("Truck sent. Payment received: $%s." % _format_money(payout))
 	else:
-		set_hint("Stage a report at Reports Out first.")
+		set_hint("Load a finished part before sending the truck.")
 
 
 func _toggle_shop() -> void:

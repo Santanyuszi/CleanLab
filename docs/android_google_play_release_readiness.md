@@ -28,17 +28,15 @@ Required Android release fields in `export_presets.cfg`:
 
 ## Launcher/adaptive icons
 
-Android launcher icon fields are intentionally left blank in `export_presets.cfg` until final production assets are provided:
+Android launcher icon fields are configured in `export_presets.cfg`:
 
-- `launcher_icons/main_192x192`
-- `launcher_icons/adaptive_foreground_432x432`
-- `launcher_icons/adaptive_background_432x432`
+- `launcher_icons/main_192x192` → `res://assets/app_icon/android_launcher_192.png`
+- `launcher_icons/adaptive_foreground_432x432` → `res://assets/app_icon/android_adaptive_foreground_432.png`
+- `launcher_icons/adaptive_background_432x432` → `res://assets/app_icon/android_adaptive_background_432.png`
 
-Missing final assets:
+Google Play listing icon:
 
-- A square launcher icon image suitable for Play (`192x192` source minimum).
-- Adaptive icon foreground art (`432x432` source).
-- Adaptive icon background art (`432x432` source).
+- `docs/google_play_listing/cleanlab_google_play_icon_512.png`
 
 ## Google Play Games readiness
 

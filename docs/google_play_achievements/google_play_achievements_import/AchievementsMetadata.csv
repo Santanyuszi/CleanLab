@@ -1,0 +1,72 @@
+"Sample Handler Bronze","Accept and process customer sample work. Bronze target: 1.",false,0,"Revealed",5,1
+"Sample Handler Silver","Accept and process customer sample work. Silver target: 5.",false,0,"Revealed",10,2
+"Sample Handler Gold","Accept and process customer sample work. Gold target: 15.",false,0,"Revealed",15,3
+"Sample Handler Certified","Accept and process customer sample work. Certified target: 40.",false,0,"Revealed",25,4
+"Extraction Specialist Bronze","Complete extraction station work. Bronze target: 2.",false,0,"Revealed",5,5
+"Extraction Specialist Silver","Complete extraction station work. Silver target: 10.",false,0,"Revealed",10,6
+"Extraction Specialist Gold","Complete extraction station work. Gold target: 35.",false,0,"Revealed",15,7
+"Extraction Specialist Certified","Complete extraction station work. Certified target: 100.",false,0,"Revealed",25,8
+"Drying Specialist Bronze","Complete drying oven work. Bronze target: 2.",false,0,"Revealed",5,9
+"Drying Specialist Silver","Complete drying oven work. Silver target: 10.",false,0,"Revealed",10,10
+"Drying Specialist Gold","Complete drying oven work. Gold target: 35.",false,0,"Revealed",15,11
+"Drying Specialist Certified","Complete drying oven work. Certified target: 100.",false,0,"Revealed",25,12
+"Microscope Operator Bronze","Complete microscope analysis work. Bronze target: 2.",false,0,"Revealed",5,13
+"Microscope Operator Silver","Complete microscope analysis work. Silver target: 10.",false,0,"Revealed",10,14
+"Microscope Operator Gold","Complete microscope analysis work. Gold target: 35.",false,0,"Revealed",15,15
+"Microscope Operator Certified","Complete microscope analysis work. Certified target: 100.",false,0,"Revealed",25,16
+"Particle Hunter Bronze","Find and classify particles. Bronze target: 2.",false,0,"Revealed",5,17
+"Particle Hunter Silver","Find and classify particles. Silver target: 20.",false,0,"Revealed",10,18
+"Particle Hunter Gold","Find and classify particles. Gold target: 75.",false,0,"Revealed",15,19
+"Particle Hunter Certified","Find and classify particles. Certified target: 200.",false,0,"Revealed",25,20
+"Metallic Expert Bronze","Correctly classify metallic particles. Bronze target: 1.",false,0,"Revealed",5,21
+"Metallic Expert Silver","Correctly classify metallic particles. Silver target: 8.",false,0,"Revealed",10,22
+"Metallic Expert Gold","Correctly classify metallic particles. Gold target: 30.",false,0,"Revealed",15,23
+"Metallic Expert Certified","Correctly classify metallic particles. Certified target: 90.",false,0,"Revealed",25,24
+"Fiber Expert Bronze","Correctly classify fiber particles. Bronze target: 1.",false,0,"Revealed",5,25
+"Fiber Expert Silver","Correctly classify fiber particles. Silver target: 8.",false,0,"Revealed",10,26
+"Fiber Expert Gold","Correctly classify fiber particles. Gold target: 30.",false,0,"Revealed",15,27
+"Fiber Expert Certified","Correctly classify fiber particles. Certified target: 90.",false,0,"Revealed",25,28
+"Non-Metallic Expert Bronze","Correctly classify non-metallic particles. Bronze target: 1.",false,0,"Revealed",5,29
+"Non-Metallic Expert Silver","Correctly classify non-metallic particles. Silver target: 8.",false,0,"Revealed",10,30
+"Non-Metallic Expert Gold","Correctly classify non-metallic particles. Gold target: 30.",false,0,"Revealed",15,31
+"Non-Metallic Expert Certified","Correctly classify non-metallic particles. Certified target: 90.",false,0,"Revealed",25,32
+"Fast Analyst Bronze","Finish microscope sessions quickly. Bronze target: 1.",false,0,"Revealed",5,33
+"Fast Analyst Silver","Finish microscope sessions quickly. Silver target: 5.",false,0,"Revealed",10,34
+"Fast Analyst Gold","Finish microscope sessions quickly. Gold target: 15.",false,0,"Revealed",15,35
+"Fast Analyst Certified","Finish microscope sessions quickly. Certified target: 40.",false,0,"Revealed",25,36
+"Accuracy Master Bronze","Finish microscope sessions perfectly. Bronze target: 1.",false,0,"Revealed",5,37
+"Accuracy Master Silver","Finish microscope sessions perfectly. Silver target: 5.",false,0,"Revealed",10,38
+"Accuracy Master Gold","Finish microscope sessions perfectly. Gold target: 15.",false,0,"Revealed",15,39
+"Accuracy Master Certified","Finish microscope sessions perfectly. Certified target: 40.",false,0,"Revealed",25,40
+"Truck Dispatcher Bronze","Send finished parts by truck. Bronze target: 1.",false,0,"Revealed",5,41
+"Truck Dispatcher Silver","Send finished parts by truck. Silver target: 8.",false,0,"Revealed",10,42
+"Truck Dispatcher Gold","Send finished parts by truck. Gold target: 25.",false,0,"Revealed",15,43
+"Truck Dispatcher Certified","Send finished parts by truck. Certified target: 70.",false,0,"Revealed",25,44
+"Factory Flow Bronze","Deliver contract parts to customers. Bronze target: 2.",false,0,"Revealed",5,45
+"Factory Flow Silver","Deliver contract parts to customers. Silver target: 10.",false,0,"Revealed",10,46
+"Factory Flow Gold","Deliver contract parts to customers. Gold target: 35.",false,0,"Revealed",15,47
+"Factory Flow Certified","Deliver contract parts to customers. Certified target: 100.",false,0,"Revealed",25,48
+"Customer Satisfaction Bronze","Complete contracts without breaking trust. Bronze target: 2.",false,0,"Revealed",5,49
+"Customer Satisfaction Silver","Complete contracts without breaking trust. Silver target: 5.",false,0,"Revealed",10,50
+"Customer Satisfaction Gold","Complete contracts without breaking trust. Gold target: 12.",false,0,"Revealed",15,51
+"Customer Satisfaction Certified","Complete contracts without breaking trust. Certified target: 25.",false,0,"Revealed",25,52
+"Reputation Builder Bronze","Reach strong customer reputation. Bronze target: 65.",false,0,"Revealed",5,53
+"Reputation Builder Silver","Reach strong customer reputation. Silver target: 75.",false,0,"Revealed",10,54
+"Reputation Builder Gold","Reach strong customer reputation. Gold target: 88.",false,0,"Revealed",15,55
+"Reputation Builder Certified","Reach strong customer reputation. Certified target: 98.",false,0,"Revealed",25,56
+"Upgrade Engineer Bronze","Upgrade lab equipment. Bronze target: 1.",false,0,"Revealed",5,57
+"Upgrade Engineer Silver","Upgrade lab equipment. Silver target: 4.",false,0,"Revealed",10,58
+"Upgrade Engineer Gold","Upgrade lab equipment. Gold target: 8.",false,0,"Revealed",15,59
+"Upgrade Engineer Certified","Upgrade lab equipment. Certified target: 14.",false,0,"Revealed",25,60
+"Automation Expert Bronze","Bring equipment lines to maximum capability. Bronze target: 1.",false,0,"Revealed",5,61
+"Automation Expert Silver","Bring equipment lines to maximum capability. Silver target: 2.",false,0,"Revealed",10,62
+"Automation Expert Gold","Bring equipment lines to maximum capability. Gold target: 3.",false,0,"Revealed",15,63
+"Automation Expert Certified","Bring equipment lines to maximum capability. Certified target: 4.",false,0,"Revealed",25,64
+"Cleanroom Discipline Bronze","Maintain cleanroom compliance and consistency. Bronze target: 3.",false,0,"Revealed",5,65
+"Cleanroom Discipline Silver","Maintain cleanroom compliance and consistency. Silver target: 8.",false,0,"Revealed",10,66
+"Cleanroom Discipline Gold","Maintain cleanroom compliance and consistency. Gold target: 18.",false,0,"Revealed",15,67
+"Cleanroom Discipline Certified","Maintain cleanroom compliance and consistency. Certified target: 40.",false,0,"Revealed",25,68
+"Technical Cleanliness Master Bronze","Certify achievements across the lab. Bronze target: 1.",false,0,"Revealed",5,69
+"Technical Cleanliness Master Silver","Certify achievements across the lab. Silver target: 4.",false,0,"Revealed",10,70
+"Technical Cleanliness Master Gold","Certify achievements across the lab. Gold target: 9.",false,0,"Revealed",15,71
+"Technical Cleanliness Master Certified","Certify achievements across the lab. Certified target: 17.",false,0,"Revealed",25,72

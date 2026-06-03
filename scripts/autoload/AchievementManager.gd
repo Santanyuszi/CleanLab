@@ -41,8 +41,8 @@ const CATALOG: Array[Dictionary] = [
 	{"id": "non_metallic_expert", "name": "Non-Metallic Expert", "description": "Correctly classify non-metallic particles.", "metric": "non_metallic_classified", "thresholds": [1, 8, 30, 90], "icon": "atom-2"},
 	{"id": "fast_analyst", "name": "Fast Analyst", "description": "Finish microscope sessions quickly.", "metric": "fast_microscopy", "thresholds": [1, 5, 15, 40], "icon": "stopwatch"},
 	{"id": "accuracy_master", "name": "Accuracy Master", "description": "Finish microscope sessions perfectly.", "metric": "perfect_microscopy", "thresholds": [1, 5, 15, 40], "icon": "target-arrow"},
-	{"id": "truck_dispatcher", "name": "Truck Dispatcher", "description": "Send completed reports by truck.", "metric": "truck_shipments", "thresholds": [1, 8, 25, 70], "icon": "truck-delivery"},
-	{"id": "factory_flow", "name": "Factory Flow", "description": "Deliver completed cleanliness reports.", "metric": "reports_delivered", "thresholds": [2, 10, 35, 100], "icon": "building-factory"},
+	{"id": "truck_dispatcher", "name": "Truck Dispatcher", "description": "Send finished parts by truck.", "metric": "truck_shipments", "thresholds": [1, 8, 25, 70], "icon": "truck-delivery"},
+	{"id": "factory_flow", "name": "Factory Flow", "description": "Deliver contract parts to customers.", "metric": "parts_delivered", "thresholds": [2, 10, 35, 100], "icon": "building-factory"},
 	{"id": "customer_satisfaction", "name": "Customer Satisfaction", "description": "Complete contracts without breaking trust.", "metric": "clean_delivery_streak", "thresholds": [2, 5, 12, 25], "icon": "mood-smile"},
 	{"id": "reputation_builder", "name": "Reputation Builder", "description": "Reach strong customer reputation.", "metric": "reputation_reached", "thresholds": [65, 75, 88, 98], "icon": "rosette-discount-check"},
 	{"id": "upgrade_engineer", "name": "Upgrade Engineer", "description": "Upgrade lab equipment.", "metric": "total_device_upgrades", "thresholds": [1, 4, 8, 14], "icon": "arrow-up-circle"},
@@ -64,7 +64,7 @@ func _ready() -> void:
 	reset()
 	GameManager.contract_accepted.connect(_on_contract_accepted)
 	GameManager.contract_cancelled.connect(_on_contract_cancelled)
-	GameManager.delivery_reports_completed.connect(_on_delivery_reports_completed)
+	GameManager.delivery_parts_completed.connect(_on_delivery_parts_completed)
 	GameManager.device_changed.connect(_on_device_changed)
 	GameManager.station_completed.connect(_on_station_completed)
 	GameManager.economy_changed.connect(_refresh_derived_progress)
@@ -75,7 +75,7 @@ func reset() -> void:
 	_stats = {
 		"contracts_accepted": 0,
 		"contracts_cancelled": 0,
-		"reports_delivered": 0,
+		"parts_delivered": 0,
 		"revenue_earned": 0,
 		"profit_generated": 0,
 		"contracts_completed": 0,
@@ -91,7 +91,7 @@ func reset() -> void:
 		"extraction_completed": 0,
 		"drying_completed": 0,
 		"microscope_completed": 0,
-		"highest_report_tier": 0,
+		"highest_part_tier": 0,
 	}
 	_tiers.clear()
 	for achievement in CATALOG:
@@ -186,22 +186,22 @@ func _on_contract_cancelled(_order_id: String) -> void:
 	_evaluate_all()
 
 
-func _on_delivery_reports_completed(payout: int, reports: Array) -> void:
-	var delivered := reports.size()
+func _on_delivery_parts_completed(payout: int, parts: Array) -> void:
+	var delivered := parts.size()
 	if delivered <= 0:
 		return
 	var cost := 0
-	var highest_tier := int(_stats["highest_report_tier"])
-	for report in reports:
-		cost += int(report.get("manufacture_cost", 0))
-		highest_tier = maxi(highest_tier, int(report.get("tier", 1)))
-	_stats["reports_delivered"] = int(_stats["reports_delivered"]) + delivered
+	var highest_tier := int(_stats["highest_part_tier"])
+	for part in parts:
+		cost += int(part.get("manufacture_cost", 0))
+		highest_tier = maxi(highest_tier, int(part.get("tier", 1)))
+	_stats["parts_delivered"] = int(_stats["parts_delivered"]) + delivered
 	_stats["contracts_completed"] = int(_stats["contracts_completed"]) + delivered
 	_stats["revenue_earned"] = int(_stats["revenue_earned"]) + payout
 	_stats["profit_generated"] = int(_stats["profit_generated"]) + maxi(payout - cost, 0)
 	_stats["clean_delivery_streak"] = int(_stats["clean_delivery_streak"]) + delivered
 	_stats["truck_shipments"] = int(_stats["truck_shipments"]) + 1
-	_stats["highest_report_tier"] = highest_tier
+	_stats["highest_part_tier"] = highest_tier
 	_evaluate_all()
 
 

@@ -15,6 +15,7 @@ config/description="Technical cleanliness laboratory simulation"
 config/version="1.1.0"
 run/main_scene="res://scenes/main/IntroSplash.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon="res://assets/app_icon/cleanlab_app_icon_512.png"
 
 [autoload]
 
@@ -31,7 +32,6 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-window/handheld/orientation=0
 
 [input]
 

@@ -260,12 +260,14 @@ show_percentage = false
 layout_mode = 2
 
 [node name="BottomRow" type="HBoxContainer" parent="VBox"]
+visible = false
 layout_mode = 2
 custom_minimum_size = Vector2(0, 150)
 theme_override_constants/separation = 8
 
 [node name="SampleQueuePanel" type="PanelContainer" parent="VBox/BottomRow"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 1.0

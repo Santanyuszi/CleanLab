@@ -259,7 +259,7 @@ func _on_class_pressed(class_id: int) -> void:
 	if ok:
 		_correct += 1
 		_score_val = 80
-		_prompt.text = "Correct classification. Report staged."
+		_prompt.text = "Correct classification. Part approved for shipment."
 		_token.call("mark_placed", true)
 	else:
 		_wrong += 1

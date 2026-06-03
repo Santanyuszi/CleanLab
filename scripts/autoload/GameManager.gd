@@ -58,7 +58,7 @@ const CHALLENGE_OFFER_MIN_COUNT := 2
 const CHALLENGE_OFFER_MAX_COUNT := 3
 const CHALLENGE_OFFER_MIN_SECONDS := 75
 const CHALLENGE_OFFER_MAX_SECONDS := 180
-const REPORT_XP_BY_TIER := {
+const PART_DELIVERY_XP_BY_TIER := {
 	1: 70,
 	2: 120,
 	3: 190,
@@ -309,7 +309,7 @@ const PERSONNEL_CATALOG: Dictionary = {
 		"phase_text": [
 			"Accepts suitable contracts automatically",
 			"Supervises entry-to-extraction routing",
-			"Sends trucks automatically when reports are ready",
+			"Sends trucks automatically when finished parts are ready",
 		],
 	},
 }
@@ -348,6 +348,7 @@ signal problem_inspection_resolved(part: Part, approved: bool)
 signal microscope_session_started(part: Part)
 signal microscopy_results_applied(summary: Dictionary)
 signal delivery_completed(payout: int)
+signal delivery_parts_completed(payout: int, parts: Array)
 signal delivery_reports_completed(payout: int, reports: Array)
 signal shipping_changed
 signal contract_offers_changed
@@ -474,10 +475,6 @@ func request_microscope_minigame(sample: Node) -> void:
 		})
 		return
 	microscope_minigame_requested.emit(sample)
-
-
-func apply_reputation_delta(delta: float) -> void:
-	update_reputation(delta)
 
 
 func spend_energy(amount: int = 1) -> bool:
@@ -923,7 +920,7 @@ func _build_challenge_offer(contract: Dictionary) -> Dictionary:
 		"quantity": quantity,
 		"progress": 0,
 		"reward_money": maxi(40, margin * quantity + tier * 35),
-		"reward_xp": roundi(float(int(REPORT_XP_BY_TIER.get(tier, REPORT_XP_BY_TIER[1])) * quantity) / 2.0) + tier * 15,
+		"reward_xp": roundi(float(int(PART_DELIVERY_XP_BY_TIER.get(tier, PART_DELIVERY_XP_BY_TIER[1])) * quantity) / 2.0) + tier * 15,
 		"reward_energy": mini(20, 4 + quantity + tier * 2),
 		"expires_at_msec": Time.get_ticks_msec() + randi_range(CHALLENGE_OFFER_MIN_SECONDS, CHALLENGE_OFFER_MAX_SECONDS) * 1000,
 	}
@@ -942,12 +939,12 @@ func _roll_challenge_quantity(tier: int) -> int:
 	return 2
 
 
-func _update_challenges_for_delivery(reports: Array) -> Array[Dictionary]:
-	if reports.is_empty() or active_challenges.is_empty():
+func _update_challenges_for_delivery(parts: Array) -> Array[Dictionary]:
+	if parts.is_empty() or active_challenges.is_empty():
 		return []
 	var completed: Array[Dictionary] = []
-	for report in reports:
-		var contract_id := str(report.get("contract_id", ""))
+	for part in parts:
+		var contract_id := str(part.get("contract_id", ""))
 		if contract_id.is_empty():
 			continue
 		for challenge in active_challenges:
@@ -1098,8 +1095,12 @@ func get_truck_capacity() -> int:
 	return clampi(get_device_level("truck"), 1, get_device_max_level("truck"))
 
 
-func can_stage_report() -> bool:
+func can_stage_part() -> bool:
 	return staged_reports.size() < get_truck_capacity()
+
+
+func can_stage_report() -> bool:
+	return can_stage_part()
 
 
 func register_part_in_queue(part: Part) -> void:
@@ -1168,12 +1169,12 @@ func cancel_active_contract(order_id: String) -> bool:
 	return false
 
 
-func stage_report_for_shipping(part: Part) -> bool:
+func stage_part_for_shipping(part: Part) -> bool:
 	if part == null or part.current_step != Part.Step.REPORT_READY:
 		return false
 	if is_order_broken(part.order.order_id):
 		return false
-	if not can_stage_report():
+	if not can_stage_part():
 		return false
 	staged_reports.append({
 		"name": part.order.order_id,
@@ -1191,6 +1192,10 @@ func stage_report_for_shipping(part: Part) -> bool:
 	return true
 
 
+func stage_report_for_shipping(part: Part) -> bool:
+	return stage_part_for_shipping(part)
+
+
 func is_order_broken(order_id: String) -> bool:
 	for entry in sample_queue:
 		if entry.get("name", "") == order_id:
@@ -1198,24 +1203,32 @@ func is_order_broken(order_id: String) -> bool:
 	return false
 
 
-func get_staged_report_count() -> int:
+func get_staged_part_count() -> int:
 	return staged_reports.size()
 
 
-func get_staged_report_total() -> int:
+func get_staged_report_count() -> int:
+	return get_staged_part_count()
+
+
+func get_staged_part_total() -> int:
 	var total := 0
-	for report in staged_reports:
-		total += int(report.get("payout", 0))
+	for part in staged_reports:
+		total += int(part.get("payout", 0))
 	return total
+
+
+func get_staged_report_total() -> int:
+	return get_staged_part_total()
 
 
 func send_truck() -> int:
 	if staged_reports.is_empty():
 		return 0
-	var payout := get_staged_report_total()
-	var delivered_reports := staged_reports.duplicate(true)
+	var payout := get_staged_part_total()
+	var delivered_parts := staged_reports.duplicate(true)
 	staged_reports.clear()
-	complete_delivery(payout, delivered_reports)
+	complete_delivery(payout, delivered_parts)
 	shipping_changed.emit()
 	save_progress()
 	return payout
@@ -1245,30 +1258,31 @@ func resolve_problem_inspection(part: Part, approved: bool) -> void:
 	problem_inspection_resolved.emit(part, approved)
 
 
-func complete_delivery(payout: int, delivered_reports: Array = []) -> void:
+func complete_delivery(payout: int, delivered_parts: Array = []) -> void:
 	player_money += payout
-	player_xp += _delivery_xp_for_reports(delivered_reports, payout)
+	player_xp += _delivery_xp_for_parts(delivered_parts, payout)
 	_apply_level_progress()
 	lab_reputation = clampf(lab_reputation + 3.0, 0.0, 100.0)
 	game_minutes += 3
-	_update_challenges_for_delivery(delivered_reports)
+	_update_challenges_for_delivery(delivered_parts)
 	_check_contract_breaks()
 	economy_changed.emit()
 	sample_queue_changed.emit()
 	energy_changed.emit()
 	challenges_changed.emit()
-	delivery_reports_completed.emit(payout, delivered_reports)
+	delivery_parts_completed.emit(payout, delivered_parts)
+	delivery_reports_completed.emit(payout, delivered_parts)
 	delivery_completed.emit(payout)
 	save_progress()
 
 
-func _delivery_xp_for_reports(delivered_reports: Array, payout: int) -> int:
-	if delivered_reports.is_empty():
-		return maxi(floori(float(payout) / 6.0), REPORT_XP_BY_TIER[1])
+func _delivery_xp_for_parts(delivered_parts: Array, payout: int) -> int:
+	if delivered_parts.is_empty():
+		return maxi(floori(float(payout) / 6.0), PART_DELIVERY_XP_BY_TIER[1])
 	var xp := 0
-	for report in delivered_reports:
-		var tier := int(report.get("tier", 1))
-		xp += int(REPORT_XP_BY_TIER.get(tier, REPORT_XP_BY_TIER[1]))
+	for part in delivered_parts:
+		var tier := int(part.get("tier", 1))
+		xp += int(PART_DELIVERY_XP_BY_TIER.get(tier, PART_DELIVERY_XP_BY_TIER[1]))
 	return xp
 
 

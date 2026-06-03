@@ -1,5 +1,5 @@
 extends Node2D
-## Lab floor: tap samples through stations, then send staged reports by truck.
+## Lab floor: tap samples through stations, then send finished parts by truck.
 
 @export var part_scene: PackedScene
 
@@ -25,8 +25,8 @@ const DRAWN_ART_NODES: Array[StringName] = [
 	&"StorageRack",
 	&"SamplesSlot",
 	&"SamplesInLabel",
-	&"ReportsSlot",
-	&"ReportsOutLabel",
+	&"PartsOutSlot",
+	&"PartsOutLabel",
 	&"OasisLogo",
 	&"OasisSub",
 	&"IncomingLabel",
@@ -186,12 +186,9 @@ func _run_personnel_routing() -> void:
 	if labor_level >= 2:
 		if _try_route_ready_station(WorkStation.Kind.EXTRACTION, WorkStation.Kind.DRYING):
 			return
-		if _try_route_loose_part(Part.Step.EXTRACTED, WorkStation.Kind.DRYING):
-			return
 	if labor_level >= 3:
 		if _try_route_ready_station(WorkStation.Kind.DRYING, WorkStation.Kind.MICROSCOPE):
 			return
-		_try_route_loose_part(Part.Step.DRIED, WorkStation.Kind.MICROSCOPE)
 
 
 func _try_auto_accept_contract() -> void:
@@ -234,7 +231,7 @@ func _try_auto_accept_contract() -> void:
 func _try_auto_send_truck() -> void:
 	if not GameManager.is_personnel_employed("lab_manager") or GameManager.get_personnel_level("lab_manager") < 3:
 		return
-	if GameManager.get_staged_report_count() <= 0:
+	if GameManager.get_staged_part_count() <= 0:
 		return
 	if not GameManager.spend_energy(1):
 		return
@@ -274,31 +271,31 @@ func _on_truck_overlay_pressed() -> void:
 	if payout > 0:
 		shell.set_hint("Truck sent. Payment received: $%s." % _format_money(payout))
 	else:
-		shell.set_hint("Stage a report at Reports Out first.")
+		shell.set_hint("Load a finished part before sending the truck.")
 
 
 func _refresh_truck_overlay_button() -> void:
 	if _truck_overlay_button == null and _truck_count_label == null:
 		return
-	var staged_count := GameManager.get_staged_report_count()
+	var staged_count := GameManager.get_staged_part_count()
 	var capacity := GameManager.get_truck_capacity()
-	var has_reports := staged_count > 0
+	var has_parts := staged_count > 0
 	if _truck_overlay_button:
-		_truck_overlay_button.disabled = not has_reports
-		_refresh_truck_overlay_pulse(has_reports)
+		_truck_overlay_button.disabled = not has_parts
+		_refresh_truck_overlay_pulse(has_parts)
 	if _truck_count_label:
 		_truck_count_label.text = "%d/%d" % [staged_count, capacity]
-		_truck_count_label.visible = has_reports
-		_truck_count_label.modulate = Color(1.0, 1.0, 1.0, 1.0 if has_reports else 0.0)
+		_truck_count_label.visible = has_parts
+		_truck_count_label.modulate = Color(1.0, 1.0, 1.0, 1.0 if has_parts else 0.0)
 
 
-func _refresh_truck_overlay_pulse(has_reports: bool) -> void:
+func _refresh_truck_overlay_pulse(has_parts: bool) -> void:
 	if _truck_overlay_tween:
 		_truck_overlay_tween.kill()
 		_truck_overlay_tween = null
 	if _truck_overlay_button == null:
 		return
-	if not has_reports:
+	if not has_parts:
 		_truck_overlay_button.modulate = Color(1.0, 1.0, 1.0, 0.0)
 		return
 	_truck_overlay_button.modulate = Color.WHITE
@@ -311,7 +308,7 @@ func _add_truck_count_label() -> void:
 	if _truck_count_label != null:
 		return
 	var label := Label.new()
-	label.name = "TruckReportCount"
+	label.name = "TruckPartCount"
 	label.position = Vector2(1359, 484)
 	label.size = Vector2(90, 30)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE

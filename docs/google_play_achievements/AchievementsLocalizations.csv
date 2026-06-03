@@ -1,0 +1,72 @@
+"Sample Handler Bronze","Sample Handler Bronze","Accept and process customer sample work. Bronze target: 1.",en-US
+"Sample Handler Silver","Sample Handler Silver","Accept and process customer sample work. Silver target: 5.",en-US
+"Sample Handler Gold","Sample Handler Gold","Accept and process customer sample work. Gold target: 15.",en-US
+"Sample Handler Certified","Sample Handler Certified","Accept and process customer sample work. Certified target: 40.",en-US
+"Extraction Specialist Bronze","Extraction Specialist Bronze","Complete extraction station work. Bronze target: 2.",en-US
+"Extraction Specialist Silver","Extraction Specialist Silver","Complete extraction station work. Silver target: 10.",en-US
+"Extraction Specialist Gold","Extraction Specialist Gold","Complete extraction station work. Gold target: 35.",en-US
+"Extraction Specialist Certified","Extraction Specialist Certified","Complete extraction station work. Certified target: 100.",en-US
+"Drying Specialist Bronze","Drying Specialist Bronze","Complete drying oven work. Bronze target: 2.",en-US
+"Drying Specialist Silver","Drying Specialist Silver","Complete drying oven work. Silver target: 10.",en-US
+"Drying Specialist Gold","Drying Specialist Gold","Complete drying oven work. Gold target: 35.",en-US
+"Drying Specialist Certified","Drying Specialist Certified","Complete drying oven work. Certified target: 100.",en-US
+"Microscope Operator Bronze","Microscope Operator Bronze","Complete microscope analysis work. Bronze target: 2.",en-US
+"Microscope Operator Silver","Microscope Operator Silver","Complete microscope analysis work. Silver target: 10.",en-US
+"Microscope Operator Gold","Microscope Operator Gold","Complete microscope analysis work. Gold target: 35.",en-US
+"Microscope Operator Certified","Microscope Operator Certified","Complete microscope analysis work. Certified target: 100.",en-US
+"Particle Hunter Bronze","Particle Hunter Bronze","Find and classify particles. Bronze target: 2.",en-US
+"Particle Hunter Silver","Particle Hunter Silver","Find and classify particles. Silver target: 20.",en-US
+"Particle Hunter Gold","Particle Hunter Gold","Find and classify particles. Gold target: 75.",en-US
+"Particle Hunter Certified","Particle Hunter Certified","Find and classify particles. Certified target: 200.",en-US
+"Metallic Expert Bronze","Metallic Expert Bronze","Correctly classify metallic particles. Bronze target: 1.",en-US
+"Metallic Expert Silver","Metallic Expert Silver","Correctly classify metallic particles. Silver target: 8.",en-US
+"Metallic Expert Gold","Metallic Expert Gold","Correctly classify metallic particles. Gold target: 30.",en-US
+"Metallic Expert Certified","Metallic Expert Certified","Correctly classify metallic particles. Certified target: 90.",en-US
+"Fiber Expert Bronze","Fiber Expert Bronze","Correctly classify fiber particles. Bronze target: 1.",en-US
+"Fiber Expert Silver","Fiber Expert Silver","Correctly classify fiber particles. Silver target: 8.",en-US
+"Fiber Expert Gold","Fiber Expert Gold","Correctly classify fiber particles. Gold target: 30.",en-US
+"Fiber Expert Certified","Fiber Expert Certified","Correctly classify fiber particles. Certified target: 90.",en-US
+"Non-Metallic Expert Bronze","Non-Metallic Expert Bronze","Correctly classify non-metallic particles. Bronze target: 1.",en-US
+"Non-Metallic Expert Silver","Non-Metallic Expert Silver","Correctly classify non-metallic particles. Silver target: 8.",en-US
+"Non-Metallic Expert Gold","Non-Metallic Expert Gold","Correctly classify non-metallic particles. Gold target: 30.",en-US
+"Non-Metallic Expert Certified","Non-Metallic Expert Certified","Correctly classify non-metallic particles. Certified target: 90.",en-US
+"Fast Analyst Bronze","Fast Analyst Bronze","Finish microscope sessions quickly. Bronze target: 1.",en-US
+"Fast Analyst Silver","Fast Analyst Silver","Finish microscope sessions quickly. Silver target: 5.",en-US
+"Fast Analyst Gold","Fast Analyst Gold","Finish microscope sessions quickly. Gold target: 15.",en-US
+"Fast Analyst Certified","Fast Analyst Certified","Finish microscope sessions quickly. Certified target: 40.",en-US
+"Accuracy Master Bronze","Accuracy Master Bronze","Finish microscope sessions perfectly. Bronze target: 1.",en-US
+"Accuracy Master Silver","Accuracy Master Silver","Finish microscope sessions perfectly. Silver target: 5.",en-US
+"Accuracy Master Gold","Accuracy Master Gold","Finish microscope sessions perfectly. Gold target: 15.",en-US
+"Accuracy Master Certified","Accuracy Master Certified","Finish microscope sessions perfectly. Certified target: 40.",en-US
+"Truck Dispatcher Bronze","Truck Dispatcher Bronze","Send finished parts by truck. Bronze target: 1.",en-US
+"Truck Dispatcher Silver","Truck Dispatcher Silver","Send finished parts by truck. Silver target: 8.",en-US
+"Truck Dispatcher Gold","Truck Dispatcher Gold","Send finished parts by truck. Gold target: 25.",en-US
+"Truck Dispatcher Certified","Truck Dispatcher Certified","Send finished parts by truck. Certified target: 70.",en-US
+"Factory Flow Bronze","Factory Flow Bronze","Deliver contract parts to customers. Bronze target: 2.",en-US
+"Factory Flow Silver","Factory Flow Silver","Deliver contract parts to customers. Silver target: 10.",en-US
+"Factory Flow Gold","Factory Flow Gold","Deliver contract parts to customers. Gold target: 35.",en-US
+"Factory Flow Certified","Factory Flow Certified","Deliver contract parts to customers. Certified target: 100.",en-US
+"Customer Satisfaction Bronze","Customer Satisfaction Bronze","Complete contracts without breaking trust. Bronze target: 2.",en-US
+"Customer Satisfaction Silver","Customer Satisfaction Silver","Complete contracts without breaking trust. Silver target: 5.",en-US
+"Customer Satisfaction Gold","Customer Satisfaction Gold","Complete contracts without breaking trust. Gold target: 12.",en-US
+"Customer Satisfaction Certified","Customer Satisfaction Certified","Complete contracts without breaking trust. Certified target: 25.",en-US
+"Reputation Builder Bronze","Reputation Builder Bronze","Reach strong customer reputation. Bronze target: 65.",en-US
+"Reputation Builder Silver","Reputation Builder Silver","Reach strong customer reputation. Silver target: 75.",en-US
+"Reputation Builder Gold","Reputation Builder Gold","Reach strong customer reputation. Gold target: 88.",en-US
+"Reputation Builder Certified","Reputation Builder Certified","Reach strong customer reputation. Certified target: 98.",en-US
+"Upgrade Engineer Bronze","Upgrade Engineer Bronze","Upgrade lab equipment. Bronze target: 1.",en-US
+"Upgrade Engineer Silver","Upgrade Engineer Silver","Upgrade lab equipment. Silver target: 4.",en-US
+"Upgrade Engineer Gold","Upgrade Engineer Gold","Upgrade lab equipment. Gold target: 8.",en-US
+"Upgrade Engineer Certified","Upgrade Engineer Certified","Upgrade lab equipment. Certified target: 14.",en-US
+"Automation Expert Bronze","Automation Expert Bronze","Bring equipment lines to maximum capability. Bronze target: 1.",en-US
+"Automation Expert Silver","Automation Expert Silver","Bring equipment lines to maximum capability. Silver target: 2.",en-US
+"Automation Expert Gold","Automation Expert Gold","Bring equipment lines to maximum capability. Gold target: 3.",en-US
+"Automation Expert Certified","Automation Expert Certified","Bring equipment lines to maximum capability. Certified target: 4.",en-US
+"Cleanroom Discipline Bronze","Cleanroom Discipline Bronze","Maintain cleanroom compliance and consistency. Bronze target: 3.",en-US
+"Cleanroom Discipline Silver","Cleanroom Discipline Silver","Maintain cleanroom compliance and consistency. Silver target: 8.",en-US
+"Cleanroom Discipline Gold","Cleanroom Discipline Gold","Maintain cleanroom compliance and consistency. Gold target: 18.",en-US
+"Cleanroom Discipline Certified","Cleanroom Discipline Certified","Maintain cleanroom compliance and consistency. Certified target: 40.",en-US
+"Technical Cleanliness Master Bronze","Technical Cleanliness Master Bronze","Certify achievements across the lab. Bronze target: 1.",en-US
+"Technical Cleanliness Master Silver","Technical Cleanliness Master Silver","Certify achievements across the lab. Silver target: 4.",en-US
+"Technical Cleanliness Master Gold","Technical Cleanliness Master Gold","Certify achievements across the lab. Gold target: 9.",en-US
+"Technical Cleanliness Master Certified","Technical Cleanliness Master Certified","Certify achievements across the lab. Certified target: 17.",en-US

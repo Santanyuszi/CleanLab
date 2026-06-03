@@ -53,7 +53,7 @@ func _ready() -> void:
 	_refresh_device_art()
 	GameManager.device_changed.connect(_on_device_changed)
 	if station_kind == Kind.TRUCK:
-		_set_status("Reports Out")
+		_set_status("Parts Out")
 	else:
 		_set_status("Tap to start")
 	_emit_status()
@@ -162,7 +162,7 @@ func remove_order(order_id: String) -> bool:
 	return false
 
 
-func try_deliver_report(part: Part) -> bool:
+func try_deliver_part(part: Part) -> bool:
 	if station_kind != Kind.TRUCK:
 		return false
 	if part.current_step != Part.Step.REPORT_READY:
@@ -179,9 +179,13 @@ func try_deliver_report(part: Part) -> bool:
 		"manufacture_cost": part.order.manufacture_cost,
 	}])
 	part.queue_free()
-	_set_status("Reports Out")
+	_set_status("Parts Out")
 	_set_platform_color(Color(0.16, 0.2, 0.26))
 	return true
+
+
+func try_deliver_report(part: Part) -> bool:
+	return try_deliver_part(part)
 
 
 func resume_after_inspection(passed: bool) -> void:
@@ -205,7 +209,7 @@ func resume_after_inspection(passed: bool) -> void:
 	_part_states[inspected_part.order.order_id] = SlotState.READY
 	slot_state = SlotState.READY
 	if inspected_part.current_step == Part.Step.REPORT_READY:
-		_set_status("Tap to collect report")
+		_set_status("Tap finished part")
 	else:
 		_set_status("Tap to collect")
 	_set_platform_color(Color(0.18, 0.58, 0.38))
@@ -315,10 +319,10 @@ func _emit_status() -> void:
 
 func _finish_microscope_part(part: Part) -> void:
 	part.set_report_ready()
-	if GameManager.stage_report_for_shipping(part):
+	if GameManager.stage_part_for_shipping(part):
 		_remove_part(part)
 		part.queue_free()
-		_set_status("Report staged")
+		_set_status("Part loaded")
 		_set_platform_color(Color(0.18, 0.58, 0.38))
 	else:
 		_part_states[part.order.order_id] = SlotState.READY

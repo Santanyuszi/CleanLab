@@ -370,7 +370,7 @@ theme_override_font_sizes/font_size = 18
 text = "SAMPLES\nIN\n↓"
 horizontal_alignment = 1
 
-[node name="ReportsSlot" type="ColorRect" parent="."]
+[node name="PartsOutSlot" type="ColorRect" parent="."]
 visible = false
 offset_left = 1360.0
 offset_top = 535.0
@@ -379,7 +379,7 @@ offset_bottom = 575.0
 mouse_filter = 2
 color = Color(0.08, 0.45, 0.5, 0.45)
 
-[node name="ReportsOutLabel" type="Label" parent="."]
+[node name="PartsOutLabel" type="Label" parent="."]
 visible = false
 offset_left = 1325.0
 offset_top = 460.0
@@ -388,7 +388,7 @@ offset_bottom = 525.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.0, 0.36, 0.4, 1)
 theme_override_font_sizes/font_size = 18
-text = "REPORTS\nOUT\n↓"
+text = "PARTS\nOUT\n↓"
 horizontal_alignment = 1
 
 [node name="OasisLogo" type="Label" parent="."]
@@ -453,7 +453,7 @@ offset_right = 1500.0
 offset_bottom = 640.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.55, 0.9, 0.65, 1)
-text = "Reports Out"
+text = "Parts Out"
 horizontal_alignment = 1
 
 [node name="DragController" type="Node" parent="."]

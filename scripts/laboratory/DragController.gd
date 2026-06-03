@@ -1,5 +1,5 @@
 extends Node
-## Tap-to-route controller between incoming, stations, and reports out.
+## Tap-to-route controller between incoming, stations, and finished-part shipping.
 
 @export var lab_path: NodePath = ^".."
 
@@ -46,18 +46,18 @@ func _handle_tap(world: Vector2) -> void:
 	var ready_station := _ready_station_part_at(world)
 	if ready_station:
 		var ready_part := ready_station.get_ready_part_at(world)
-		if ready_part and ready_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_report():
+		if ready_part and ready_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_part():
 			_flash_station_warning(ready_station.device_key)
-			_hint("Truck is full. Send it before the microscope can release more reports.")
+			_hint("Truck is full. Send it before the microscope can release more finished parts.")
 			return
 		_play_claim_sfx()
 		_route_part(ready_station.pick_up(), true)
 		return
 	var station: WorkStation = _station_at(world)
 	if station and station.can_pick_up():
-		if station.station_kind == WorkStation.Kind.MICROSCOPE and station.held_part and station.held_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_report():
+		if station.station_kind == WorkStation.Kind.MICROSCOPE and station.held_part and station.held_part.current_step == Part.Step.REPORT_READY and not GameManager.can_stage_part():
 			_flash_station_warning(station.device_key)
-			_hint("Truck is full. Send it before the microscope can release more reports.")
+			_hint("Truck is full. Send it before the microscope can release more finished parts.")
 			return
 		_play_claim_sfx()
 		_route_part(station.pick_up(), true)
@@ -96,7 +96,7 @@ func _route_part(part: Part, already_claimed: bool = false) -> void:
 	if part == null:
 		return
 	if part.current_step == Part.Step.REPORT_READY:
-		_stage_report(part)
+		_stage_part(part)
 		return
 	var station := _next_station_for(part)
 	if station == null:
@@ -133,18 +133,18 @@ func _tween_part_to(part: Part, target: Vector2) -> void:
 	tween.tween_property(part, "global_position", target, 0.22)
 
 
-func _stage_report(part: Part) -> void:
-	if GameManager.stage_report_for_shipping(part):
+func _stage_part(part: Part) -> void:
+	if GameManager.stage_part_for_shipping(part):
 		_play_claim_sfx()
 		_tween_part_to(part, Vector2(1238, 508))
 		await get_tree().create_timer(0.24).timeout
 		if is_instance_valid(part):
 			part.queue_free()
-		_hint("Report staged. Send the truck when ready.")
+		_hint("Finished part loaded. Send the truck when ready.")
 	elif GameManager.is_order_broken(part.order.order_id):
-		_hint("Contract broken. This report can no longer be shipped.")
-	elif not GameManager.can_stage_report():
-		_hint("Truck is full. Send it before staging more reports.")
+		_hint("Contract broken. This part can no longer be shipped.")
+	elif not GameManager.can_stage_part():
+		_hint("Truck is full. Send it before loading more parts.")
 
 
 func _station_at(world: Vector2) -> WorkStation:
@@ -162,7 +162,7 @@ func _hint(text: String) -> void:
 
 func _drag_hint_for(part: Part) -> String:
 	if part.current_step == Part.Step.REPORT_READY:
-		return "%s — drag the report to the Truck Dock." % part.order.display_name
+		return "%s — drag the finished part to the truck." % part.order.display_name
 	var destination := part.next_station_name()
 	return "%s — drag to %s." % [part.order.display_name, destination]
 
