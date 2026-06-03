@@ -1210,6 +1210,14 @@ func _add_achievements_panel() -> void:
 	close.pressed.connect(_toggle_achievements)
 	header.add_child(close)
 
+	var play_games_button := Button.new()
+	play_games_button.name = "PlayGamesButton"
+	play_games_button.text = "PLAY GAMES"
+	play_games_button.custom_minimum_size = Vector2(148, TOUCH_TARGET)
+	play_games_button.visible = PlatformServices.is_available()
+	play_games_button.pressed.connect(_on_play_games_achievements_pressed)
+	header.add_child(play_games_button)
+
 	_achievements_summary = Label.new()
 	_achievements_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_achievements_summary.add_theme_font_size_override("font_size", 13)
@@ -1242,7 +1250,14 @@ func _toggle_achievements() -> void:
 		_layout_achievements_popup()
 		_refresh_achievements()
 		_deferred_layout_achievements_popup()
+		var pg_btn := _achievements_panel.find_child("PlayGamesButton", true, false) as Button
+		if pg_btn:
+			pg_btn.visible = PlatformServices.is_available()
 	_refresh_achievement_button()
+
+
+func _on_play_games_achievements_pressed() -> void:
+	PlatformServices.show_achievements_ui()
 
 
 func _refresh_achievements() -> void:
@@ -1261,10 +1276,16 @@ func _refresh_achievements() -> void:
 			certified += 1
 		_achievements_grid.add_child(_build_achievement_card(achievement))
 	if _achievements_summary:
-		_achievements_summary.text = "Unlocked %d / %d   Certified %d   Google Play sync ready after Play Console IDs are added." % [
+		var sync_hint: String
+		if PlatformServices.is_available():
+			sync_hint = "   Synced to Google Play."
+		else:
+			sync_hint = "   Google Play sync active after IDs are filled in PlatformServices.gd."
+		_achievements_summary.text = "Unlocked %d / %d   Certified %d%s" % [
 			unlocked,
 			catalog.size(),
 			certified,
+			sync_hint,
 		]
 	_refresh_achievement_grid_columns()
 	_style_buttons(_achievements_grid)
