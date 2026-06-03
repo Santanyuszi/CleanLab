@@ -1278,9 +1278,9 @@ func _refresh_achievements() -> void:
 	if _achievements_summary:
 		var sync_hint: String
 		if PlatformServices.is_available():
-			sync_hint = "   Synced to Google Play."
+			sync_hint = "   Google Play Games ready."
 		else:
-			sync_hint = "   Google Play sync active after IDs are filled in PlatformServices.gd."
+			sync_hint = "   Google Play Games not configured for this build."
 		_achievements_summary.text = "Unlocked %d / %d   Certified %d%s" % [
 			unlocked,
 			catalog.size(),
