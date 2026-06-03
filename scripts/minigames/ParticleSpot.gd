@@ -4,7 +4,7 @@ extends Control
 
 signal tapped(spot: ParticleSpot)
 
-var true_class: ParticleTypes.Class = ParticleTypes.Class.METALLIC
+var true_class: ParticleTypes.Class = ParticleTypes.Class.REGULAR
 var is_classified: bool = false
 var spawned_at: float = 0.0
 

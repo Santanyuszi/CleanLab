@@ -67,6 +67,13 @@ func set_report_ready() -> void:
 	_refresh_visual()
 
 
+func reset_to_incoming() -> void:
+	current_step = Step.INCOMING
+	is_on_station = false
+	_report_badge.visible = false
+	_refresh_visual()
+
+
 func begin_drag() -> void:
 	is_dragging = true
 	is_on_station = false

@@ -22,21 +22,26 @@ var player_money: int = 220
 var player_xp: int = 0
 var player_xp_to_next: int = 140
 var player_level: int = 1
+var player_energy: int = 30
+var player_energy_max: int = 30
 var lab_reputation: float = 60.0
 var contamination_trend: float = 0.35
-var escalation_risk: float = 0.45
-var alert_count: int = 0
 var samples_in_lab: int = 0
 var max_samples_in_lab: int = 20
 var game_day: int = 1
 var game_minutes: int = 480
-var pending_ftir_count: int = 0
 var sample_queue: Array[Dictionary] = []
 var staged_reports: Array[Dictionary] = []
 var contract_offers: Array[Dictionary] = []
-var escalation_tickets: Array[Dictionary] = []
+var challenge_offers: Array[Dictionary] = []
+var active_challenges: Array[Dictionary] = []
+var _energy_recharge_accumulator: float = 0.0
+var _last_energy_update_unix: int = 0
 
 const MAX_DEVICE_LEVEL := 10
+const BASE_ENERGY_MAX := 30
+const ENERGY_PER_LEVEL := 5
+const ENERGY_RECHARGE_SECONDS := 60.0
 const CONTRACT_BREAK_SATISFACTION := 25.0
 const MANUFACTURING_BUFFER_BY_TIER := {
 	1: 3,
@@ -44,10 +49,15 @@ const MANUFACTURING_BUFFER_BY_TIER := {
 	3: 5,
 	4: 10,
 }
-const CONTRACT_OFFER_MIN_COUNT := 1
-const CONTRACT_OFFER_MAX_COUNT := 2
-const CONTRACT_OFFER_MIN_SECONDS := 55
-const CONTRACT_OFFER_MAX_SECONDS := 130
+const SAMPLE_ENTRY_BUFFER_CAPACITY := 10
+const CONTRACT_OFFER_MIN_COUNT := 2
+const CONTRACT_OFFER_MAX_COUNT := 3
+const CONTRACT_OFFER_MIN_SECONDS := 10
+const CONTRACT_OFFER_MAX_SECONDS := 30
+const CHALLENGE_OFFER_MIN_COUNT := 2
+const CHALLENGE_OFFER_MAX_COUNT := 3
+const CHALLENGE_OFFER_MIN_SECONDS := 75
+const CHALLENGE_OFFER_MAX_SECONDS := 180
 const REPORT_XP_BY_TIER := {
 	1: 70,
 	2: 120,
@@ -310,7 +320,6 @@ var device_levels: Dictionary = {
 	"microscope": 1,
 	"truck": 1,
 	"storage": 1,
-	"escalation": 1,
 }
 
 var device_owned: Dictionary = {
@@ -344,32 +353,48 @@ signal shipping_changed
 signal contract_offers_changed
 signal contract_accepted(contract: Dictionary)
 signal contract_cancelled(order_id: String)
+signal energy_changed
+signal challenges_changed
+signal challenge_completed(challenge: Dictionary)
 signal station_completed(device_key: String)
 signal microscope_minigame_requested(sample: Node)
-signal escalation_queue_changed
 
 
 func _ready() -> void:
 	randomize()
 
 
+func _process(delta: float) -> void:
+	_energy_recharge_accumulator += delta
+	if _energy_recharge_accumulator < ENERGY_RECHARGE_SECONDS:
+		return
+	var gained := floori(_energy_recharge_accumulator / ENERGY_RECHARGE_SECONDS)
+	_energy_recharge_accumulator = fmod(_energy_recharge_accumulator, ENERGY_RECHARGE_SECONDS)
+	restore_energy(gained)
+	_last_energy_update_unix = int(Time.get_unix_time_from_system())
+
+
 func start_run(force_reset: bool = false) -> void:
 	if not force_reset and load_progress():
 		refresh_contract_offers(false)
+		refresh_challenge_offers(false)
 		return
 	game_layer = GameLayer.LAB
 	management_phase = ManagementPhase.WAITING_FOR_INCOMING
 	sample_queue.clear()
 	staged_reports.clear()
 	contract_offers.clear()
-	escalation_tickets.clear()
+	challenge_offers.clear()
+	active_challenges.clear()
 	samples_in_lab = 0
 	player_money = 220
 	player_xp = 0
 	player_xp_to_next = _xp_required_for_next_level(1)
 	player_level = 1
+	player_energy_max = _energy_max_for_level(player_level)
+	player_energy = player_energy_max
+	_last_energy_update_unix = int(Time.get_unix_time_from_system())
 	lab_reputation = 60.0
-	alert_count = 0
 	game_day = 1
 	game_minutes = 480
 	device_levels = {
@@ -378,7 +403,6 @@ func start_run(force_reset: bool = false) -> void:
 		"microscope": 1,
 		"truck": 1,
 		"storage": 1,
-		"escalation": 1,
 	}
 	device_owned = {
 		"extraction": true,
@@ -399,10 +423,12 @@ func start_run(force_reset: bool = false) -> void:
 	economy_changed.emit()
 	sample_queue_changed.emit()
 	shipping_changed.emit()
-	escalation_queue_changed.emit()
+	energy_changed.emit()
+	challenges_changed.emit()
 	if has_node("/root/AchievementManager"):
 		AchievementManager.reset()
 	refresh_contract_offers(true)
+	refresh_challenge_offers(true)
 	save_progress()
 
 
@@ -443,7 +469,6 @@ func request_microscope_minigame(sample: Node) -> void:
 			"score": 90,
 			"accuracy": 0.78,
 			"avg_speed": 1.7,
-			"ftir_flags": 0,
 			"wrong": 0,
 			"classified": 1,
 		})
@@ -453,6 +478,43 @@ func request_microscope_minigame(sample: Node) -> void:
 
 func apply_reputation_delta(delta: float) -> void:
 	update_reputation(delta)
+
+
+func spend_energy(amount: int = 1) -> bool:
+	if amount <= 0:
+		return true
+	if player_energy < amount:
+		return false
+	player_energy -= amount
+	energy_changed.emit()
+	economy_changed.emit()
+	save_progress()
+	return true
+
+
+func has_energy(amount: int = 1) -> bool:
+	return player_energy >= amount
+
+
+func restore_energy(amount: int = 1) -> void:
+	if amount <= 0 or player_energy >= player_energy_max:
+		return
+	player_energy = mini(player_energy + amount, player_energy_max)
+	energy_changed.emit()
+	economy_changed.emit()
+	save_progress()
+
+
+func _energy_max_for_level(level: int) -> int:
+	return BASE_ENERGY_MAX + maxi(level - 1, 0) * ENERGY_PER_LEVEL
+
+
+func _sync_energy_max(fill_new_capacity: bool = false) -> void:
+	var old_max := player_energy_max
+	player_energy_max = _energy_max_for_level(player_level)
+	if fill_new_capacity and player_energy_max > old_max:
+		player_energy += player_energy_max - old_max
+	player_energy = clampi(player_energy, 0, player_energy_max)
 
 
 func get_time_string() -> String:
@@ -615,13 +677,20 @@ func get_available_contract_catalog() -> Array[Dictionary]:
 
 func refresh_contract_offers(force: bool = false) -> void:
 	var now := Time.get_ticks_msec()
+	var max_expiry := now + CONTRACT_OFFER_MAX_SECONDS * 1000
 	var retained: Array[Dictionary] = []
+	var clamped_offer_timer := false
 	for offer in contract_offers:
-		if int(offer.get("expires_at_msec", 0)) > now:
-			retained.append(offer)
-	var changed := retained.size() != contract_offers.size()
+		var expires_at := int(offer.get("expires_at_msec", 0))
+		if expires_at <= now:
+			continue
+		if expires_at > max_expiry:
+			offer["expires_at_msec"] = now + randi_range(CONTRACT_OFFER_MIN_SECONDS, CONTRACT_OFFER_MAX_SECONDS) * 1000
+			clamped_offer_timer = true
+		retained.append(offer)
+	var changed := retained.size() != contract_offers.size() or clamped_offer_timer
 	contract_offers = retained
-	if force or contract_offers.is_empty():
+	if force or contract_offers.size() < CONTRACT_OFFER_MIN_COUNT:
 		var available := get_available_contract_catalog()
 		if available.is_empty():
 			if changed or force:
@@ -629,9 +698,9 @@ func refresh_contract_offers(force: bool = false) -> void:
 			return
 		available.shuffle()
 		var target_count := randi_range(CONTRACT_OFFER_MIN_COUNT, CONTRACT_OFFER_MAX_COUNT)
-		target_count = mini(target_count, available.size())
-		for i in target_count:
-			contract_offers.append(_build_contract_offer(available[i]))
+		var missing_count := maxi(target_count - contract_offers.size(), 0)
+		for i in missing_count:
+			contract_offers.append(_build_contract_offer(available[i % available.size()]))
 		changed = true
 	if changed:
 		contract_offers_changed.emit()
@@ -640,6 +709,20 @@ func refresh_contract_offers(force: bool = false) -> void:
 
 func get_contract_offers() -> Array[Dictionary]:
 	return contract_offers.duplicate(true)
+
+
+func can_accept_contract_offer(contract: Dictionary) -> bool:
+	var batch_size := int(contract.get("batch_size", 1))
+	var total_cost := int(contract.get("manufacture_cost", 0)) * batch_size
+	return get_manufacturing_free_slots() >= batch_size and player_money >= total_cost
+
+
+func reserve_contract_offer(contract: Dictionary) -> bool:
+	var batch_size := int(contract.get("batch_size", 1))
+	var total_cost := int(contract.get("manufacture_cost", 0)) * batch_size
+	if get_manufacturing_free_slots() < batch_size:
+		return false
+	return pay_manufacture_cost(total_cost)
 
 
 func accept_contract_offer(offer_id: String) -> Dictionary:
@@ -651,6 +734,35 @@ func accept_contract_offer(offer_id: String) -> Dictionary:
 			contract_offers_changed.emit()
 			return offer
 	return {}
+
+
+func try_accept_contract_offer(offer_id: String) -> Dictionary:
+	refresh_contract_offers(false)
+	for i in contract_offers.size():
+		if str(contract_offers[i].get("offer_id", "")) != offer_id:
+			continue
+		var offer := contract_offers[i].duplicate(true)
+		if not can_accept_contract_offer(offer):
+			return {}
+		var batch_size := int(offer.get("batch_size", 1))
+		var total_cost := int(offer.get("manufacture_cost", 0)) * batch_size
+		player_money -= total_cost
+		contract_offers.remove_at(i)
+		contract_offers_changed.emit()
+		economy_changed.emit()
+		save_progress()
+		return offer
+	return {}
+
+
+func refund_contract_acceptance(contract: Dictionary) -> void:
+	var batch_size := int(contract.get("batch_size", 1))
+	var total_cost := int(contract.get("manufacture_cost", 0)) * batch_size
+	if total_cost <= 0:
+		return
+	player_money += total_cost
+	economy_changed.emit()
+	save_progress()
 
 
 func record_contract_accepted(contract: Dictionary) -> void:
@@ -672,7 +784,7 @@ func _build_contract_offer(contract: Dictionary) -> Dictionary:
 	var tier := int(offer.get("tier", 1))
 	var cost := int(offer.get("manufacture_cost", 0))
 	var batch_size := _roll_offer_batch_size(tier)
-	var margin := _roll_offer_margin(tier)
+	var margin := _roll_offer_margin(tier, batch_size)
 	if tier == 1:
 		var safe_requirement := maxf(CONTRACT_BREAK_SATISFACTION, lab_reputation - 2.0)
 		offer["satisfaction_required"] = minf(float(offer.get("satisfaction_required", 35.0)), safe_requirement)
@@ -685,29 +797,183 @@ func _build_contract_offer(contract: Dictionary) -> Dictionary:
 
 
 func _roll_offer_batch_size(tier: int) -> int:
-	var max_batch := mini(get_manufacturing_buffer_capacity(), tier + 1)
-	if tier == 1:
-		return 2 if randf() < 0.25 and max_batch >= 2 else 1
-	return randi_range(1, max_batch)
-
-
-func _roll_offer_margin(tier: int) -> int:
+	var max_batch := get_manufacturing_buffer_capacity()
+	var choices: Array[int] = []
 	match tier:
 		1:
-			return randi_range(55, 85)
+			choices = [1, 1, 1, 2, 3]
 		2:
-			return randi_range(90, 140)
+			choices = [1, 2, 2, 3, 4]
 		3:
-			return randi_range(150, 230)
+			choices = [2, 3, 3, 5]
 		4:
-			return randi_range(250, 380)
-	return randi_range(45, 75)
+			choices = [3, 5, 5, 10]
+		_:
+			choices = [1, 2]
+	var available: Array[int] = []
+	for choice in choices:
+		if choice <= max_batch:
+			available.append(choice)
+	if available.is_empty():
+		return maxi(1, max_batch)
+	return available.pick_random()
+
+
+func _roll_offer_margin(tier: int, batch_size: int = 1) -> int:
+	var min_margin := 45
+	var max_margin := 75
+	match tier:
+		1:
+			min_margin = 55
+			max_margin = 85
+		2:
+			min_margin = 90
+			max_margin = 140
+		3:
+			min_margin = 150
+			max_margin = 230
+		4:
+			min_margin = 250
+			max_margin = 380
+	var discount := 1.0
+	if batch_size >= 10:
+		discount = 0.62
+	elif batch_size >= 5:
+		discount = 0.72
+	elif batch_size >= 3:
+		discount = 0.84
+	elif batch_size >= 2:
+		discount = 0.92
+	var reputation_factor := remap(clampf(lab_reputation, 0.0, 100.0), 0.0, 100.0, 0.82, 1.18)
+	var market_noise := randf_range(0.9, 1.1)
+	return maxi(25, roundi(float(randi_range(min_margin, max_margin)) * discount * reputation_factor * market_noise))
 
 
 func _is_lower_margin_contract(a: Dictionary, b: Dictionary) -> bool:
 	var margin_a := int(a.get("sell_price", 0)) - int(a.get("manufacture_cost", 0))
 	var margin_b := int(b.get("sell_price", 0)) - int(b.get("manufacture_cost", 0))
 	return margin_a < margin_b
+
+
+func refresh_challenge_offers(force: bool = false) -> void:
+	var now := Time.get_ticks_msec()
+	var retained: Array[Dictionary] = []
+	for offer in challenge_offers:
+		if int(offer.get("expires_at_msec", 0)) > now:
+			retained.append(offer)
+	var changed := retained.size() != challenge_offers.size()
+	challenge_offers = retained
+	if force or challenge_offers.size() < CHALLENGE_OFFER_MIN_COUNT:
+		var available := get_available_contract_catalog()
+		if available.is_empty():
+			if changed or force:
+				challenges_changed.emit()
+			return
+		available.shuffle()
+		var target_count := randi_range(CHALLENGE_OFFER_MIN_COUNT, CHALLENGE_OFFER_MAX_COUNT)
+		var missing_count := maxi(target_count - challenge_offers.size(), 0)
+		for i in missing_count:
+			challenge_offers.append(_build_challenge_offer(available[i % available.size()]))
+		changed = true
+	if changed:
+		challenges_changed.emit()
+		save_progress()
+
+
+func get_challenge_offers() -> Array[Dictionary]:
+	return challenge_offers.duplicate(true)
+
+
+func get_active_challenges() -> Array[Dictionary]:
+	return active_challenges.duplicate(true)
+
+
+func get_challenge_seconds_left(challenge: Dictionary) -> int:
+	var expires_at := int(challenge.get("expires_at_msec", 0))
+	var remaining := expires_at - Time.get_ticks_msec()
+	return maxi(ceili(float(remaining) / 1000.0), 0)
+
+
+func accept_challenge_offer(challenge_id: String) -> Dictionary:
+	refresh_challenge_offers(false)
+	for i in challenge_offers.size():
+		if str(challenge_offers[i].get("challenge_id", "")) == challenge_id:
+			var challenge := challenge_offers[i].duplicate(true)
+			challenge_offers.remove_at(i)
+			challenge.erase("expires_at_msec")
+			challenge["accepted_at_msec"] = Time.get_ticks_msec()
+			challenge["progress"] = 0
+			active_challenges.append(challenge)
+			challenges_changed.emit()
+			save_progress()
+			return challenge
+	return {}
+
+
+func _build_challenge_offer(contract: Dictionary) -> Dictionary:
+	var tier := int(contract.get("tier", 1))
+	var quantity := _roll_challenge_quantity(tier)
+	var margin := int(contract.get("sell_price", 0)) - int(contract.get("manufacture_cost", 0))
+	return {
+		"challenge_id": "CHG-%d-%03d" % [Time.get_ticks_msec(), randi_range(1, 999)],
+		"contract_id": str(contract.get("id", "")),
+		"part_name": str(contract.get("name", "Part")),
+		"thumbnail": str(contract.get("thumbnail", "")),
+		"tier": tier,
+		"quantity": quantity,
+		"progress": 0,
+		"reward_money": maxi(40, margin * quantity + tier * 35),
+		"reward_xp": roundi(float(int(REPORT_XP_BY_TIER.get(tier, REPORT_XP_BY_TIER[1])) * quantity) / 2.0) + tier * 15,
+		"reward_energy": mini(20, 4 + quantity + tier * 2),
+		"expires_at_msec": Time.get_ticks_msec() + randi_range(CHALLENGE_OFFER_MIN_SECONDS, CHALLENGE_OFFER_MAX_SECONDS) * 1000,
+	}
+
+
+func _roll_challenge_quantity(tier: int) -> int:
+	match tier:
+		1:
+			return [2, 2, 3].pick_random()
+		2:
+			return [2, 3, 4].pick_random()
+		3:
+			return [3, 4, 5].pick_random()
+		4:
+			return [4, 5, 6].pick_random()
+	return 2
+
+
+func _update_challenges_for_delivery(reports: Array) -> Array[Dictionary]:
+	if reports.is_empty() or active_challenges.is_empty():
+		return []
+	var completed: Array[Dictionary] = []
+	for report in reports:
+		var contract_id := str(report.get("contract_id", ""))
+		if contract_id.is_empty():
+			continue
+		for challenge in active_challenges:
+			if str(challenge.get("contract_id", "")) != contract_id:
+				continue
+			var progress := int(challenge.get("progress", 0)) + 1
+			challenge["progress"] = mini(progress, int(challenge.get("quantity", 1)))
+	for i in range(active_challenges.size() - 1, -1, -1):
+		var challenge := active_challenges[i]
+		if int(challenge.get("progress", 0)) < int(challenge.get("quantity", 1)):
+			continue
+		active_challenges.remove_at(i)
+		_grant_challenge_reward(challenge)
+		completed.append(challenge.duplicate(true))
+		challenge_completed.emit(challenge.duplicate(true))
+	if not completed.is_empty():
+		challenges_changed.emit()
+		save_progress()
+	return completed
+
+
+func _grant_challenge_reward(challenge: Dictionary) -> void:
+	player_money += int(challenge.get("reward_money", 0))
+	player_xp += int(challenge.get("reward_xp", 0))
+	_apply_level_progress()
+	restore_energy(int(challenge.get("reward_energy", 0)))
 
 
 func get_contract_tier() -> int:
@@ -721,8 +987,7 @@ func get_contract_tier() -> int:
 
 
 func get_manufacturing_buffer_capacity() -> int:
-	var tier := get_contract_tier()
-	return int(MANUFACTURING_BUFFER_BY_TIER.get(tier, 3))
+	return SAMPLE_ENTRY_BUFFER_CAPACITY
 
 
 func has_manufacturing_capacity() -> bool:
@@ -731,59 +996,6 @@ func has_manufacturing_capacity() -> bool:
 
 func get_manufacturing_free_slots() -> int:
 	return maxi(get_manufacturing_buffer_capacity() - samples_in_lab, 0)
-
-
-func get_escalation_tickets() -> Array[Dictionary]:
-	return escalation_tickets.duplicate(true)
-
-
-func get_next_escalation_ticket() -> Dictionary:
-	if escalation_tickets.is_empty():
-		return {}
-	return escalation_tickets[0].duplicate(true)
-
-
-func queue_escalation_ticket(title: String, severity: int, reward: int, penalty: float) -> Dictionary:
-	var ticket := {
-		"id": "ESC-%d-%03d" % [Time.get_ticks_msec(), randi_range(1, 999)],
-		"title": title,
-		"severity": clampi(severity, 1, 4),
-		"reward": maxi(reward, 0),
-		"penalty": maxf(penalty, 0.0),
-		"created_at_msec": Time.get_ticks_msec(),
-	}
-	escalation_tickets.append(ticket)
-	alert_count = escalation_tickets.size()
-	escalation_risk = clampf(escalation_risk + 0.03 * float(int(ticket.get("severity", 1))), 0.05, 0.98)
-	escalation_queue_changed.emit()
-	economy_changed.emit()
-	save_progress()
-	return ticket.duplicate(true)
-
-
-func resolve_next_escalation(success: bool) -> Dictionary:
-	if escalation_tickets.is_empty():
-		return {}
-	var ticket: Dictionary = escalation_tickets.pop_front()
-	var severity := int(ticket.get("severity", 1))
-	if success:
-		var reward := int(ticket.get("reward", 0))
-		player_money += reward
-		lab_reputation = clampf(lab_reputation + float(severity) * 0.6, 0.0, 100.0)
-		escalation_risk = clampf(escalation_risk - 0.06 * float(severity), 0.02, 0.98)
-		ticket["resolved"] = "success"
-	else:
-		var penalty := float(ticket.get("penalty", 1.0))
-		lab_reputation = clampf(lab_reputation - penalty, 0.0, 100.0)
-		escalation_risk = clampf(escalation_risk + 0.04 * float(severity), 0.02, 0.98)
-		ticket["resolved"] = "failed"
-	alert_count = escalation_tickets.size()
-	_check_contract_breaks()
-	escalation_queue_changed.emit()
-	economy_changed.emit()
-	sample_queue_changed.emit()
-	save_progress()
-	return ticket
 
 
 func update_reputation(delta: float) -> void:
@@ -947,6 +1159,9 @@ func stage_report_for_shipping(part: Part) -> bool:
 		return false
 	staged_reports.append({
 		"name": part.order.order_id,
+		"part_name": part.order.part_name,
+		"contract_id": part.order.contract_id,
+		"thumbnail": part.order.thumbnail_path,
 		"payout": part.order.payout,
 		"tier": part.order.tier,
 		"satisfaction_required": part.order.satisfaction_required,
@@ -1018,9 +1233,12 @@ func complete_delivery(payout: int, delivered_reports: Array = []) -> void:
 	_apply_level_progress()
 	lab_reputation = clampf(lab_reputation + 3.0, 0.0, 100.0)
 	game_minutes += 3
+	_update_challenges_for_delivery(delivered_reports)
 	_check_contract_breaks()
 	economy_changed.emit()
 	sample_queue_changed.emit()
+	energy_changed.emit()
+	challenges_changed.emit()
 	delivery_reports_completed.emit(payout, delivered_reports)
 	delivery_completed.emit(payout)
 	save_progress()
@@ -1047,7 +1265,7 @@ func _check_contract_breaks() -> void:
 			entry["stage"] = "Contract broken"
 			raised = true
 	if raised:
-		queue_escalation_ticket("Contract break investigation", 2, 18, 2.0)
+		sample_queue_changed.emit()
 
 
 func _apply_level_progress() -> void:
@@ -1055,6 +1273,7 @@ func _apply_level_progress() -> void:
 		player_xp -= player_xp_to_next
 		player_level += 1
 		player_xp_to_next = _xp_required_for_next_level(player_level)
+		_sync_energy_max(true)
 
 
 func _xp_required_for_next_level(level: int) -> int:
@@ -1069,7 +1288,6 @@ func _xp_required_for_next_level(level: int) -> int:
 func apply_inspection_penalty() -> void:
 	var penalty := 1.5 if player_level < 4 else 3.5
 	lab_reputation = clampf(lab_reputation - penalty, 0.0, 100.0)
-	queue_escalation_ticket("QC mismatch escalation", 2, 14, penalty)
 	economy_changed.emit()
 	save_progress()
 
@@ -1083,9 +1301,6 @@ func apply_microscopy_results(summary: Dictionary) -> void:
 	player_xp += xp_gain
 	player_money += payout
 	lab_reputation = clampf(lab_reputation + (accuracy - 0.45) * 4.0 - float(wrong) * 0.35, 0.0, 100.0)
-	if wrong > 0 or accuracy < 0.6:
-		var severity := 1 if accuracy >= 0.55 else 2
-		queue_escalation_ticket("Microscope discrepancy follow-up", severity, 10 + severity * 4, 1.5 + float(severity))
 	_apply_level_progress()
 	_check_contract_breaks()
 	game_layer = GameLayer.LAB
@@ -1103,23 +1318,24 @@ func save_progress() -> bool:
 		"player_xp": player_xp,
 		"player_xp_to_next": player_xp_to_next,
 		"player_level": player_level,
+		"player_energy": player_energy,
+		"player_energy_max": player_energy_max,
+		"last_energy_update_unix": _last_energy_update_unix,
 		"lab_reputation": lab_reputation,
 		"contamination_trend": contamination_trend,
-		"escalation_risk": escalation_risk,
-		"alert_count": alert_count,
 		"samples_in_lab": samples_in_lab,
 		"max_samples_in_lab": max_samples_in_lab,
 		"game_day": game_day,
 		"game_minutes": game_minutes,
-		"pending_ftir_count": pending_ftir_count,
 		"sample_queue": sample_queue.duplicate(true),
 		"staged_reports": staged_reports.duplicate(true),
 		"contract_offers": contract_offers.duplicate(true),
+		"challenge_offers": challenge_offers.duplicate(true),
+		"active_challenges": active_challenges.duplicate(true),
 		"device_levels": device_levels.duplicate(true),
 		"device_owned": device_owned.duplicate(true),
 		"personnel_levels": personnel_levels.duplicate(true),
 		"personnel_employed": personnel_employed.duplicate(true),
-		"escalation_tickets": escalation_tickets.duplicate(true),
 		"game_layer": int(game_layer),
 		"management_phase": int(management_phase),
 	}
@@ -1136,7 +1352,13 @@ func load_progress() -> bool:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if file == null:
 		return false
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var text := file.get_as_text()
+	if text.strip_edges().is_empty():
+		return false
+	var json := JSON.new()
+	if json.parse(text) != OK:
+		return false
+	var parsed: Variant = json.data
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
 	var data: Dictionary = parsed
@@ -1144,19 +1366,22 @@ func load_progress() -> bool:
 	player_xp = max(0, int(data.get("player_xp", 0)))
 	player_xp_to_next = max(1, int(data.get("player_xp_to_next", _xp_required_for_next_level(1))))
 	player_level = max(1, int(data.get("player_level", 1)))
+	player_energy_max = max(BASE_ENERGY_MAX, int(data.get("player_energy_max", _energy_max_for_level(player_level))))
+	player_energy = clampi(int(data.get("player_energy", player_energy_max)), 0, player_energy_max)
+	_last_energy_update_unix = max(0, int(data.get("last_energy_update_unix", Time.get_unix_time_from_system())))
 	lab_reputation = clampf(float(data.get("lab_reputation", 60.0)), 0.0, 100.0)
 	contamination_trend = clampf(float(data.get("contamination_trend", 0.35)), 0.0, 1.0)
-	escalation_risk = clampf(float(data.get("escalation_risk", 0.45)), 0.02, 0.98)
-	alert_count = max(0, int(data.get("alert_count", 0)))
 	samples_in_lab = max(0, int(data.get("samples_in_lab", 0)))
 	max_samples_in_lab = max(1, int(data.get("max_samples_in_lab", 20)))
 	game_day = max(1, int(data.get("game_day", 1)))
 	game_minutes = max(0, int(data.get("game_minutes", 480)))
-	pending_ftir_count = max(0, int(data.get("pending_ftir_count", 0)))
 	sample_queue = _as_dictionary_array(data.get("sample_queue", []))
 	staged_reports = _as_dictionary_array(data.get("staged_reports", []))
 	contract_offers = _as_dictionary_array(data.get("contract_offers", []))
-	escalation_tickets = _as_dictionary_array(data.get("escalation_tickets", []))
+	_sanitize_contract_offers()
+	challenge_offers = _as_dictionary_array(data.get("challenge_offers", []))
+	active_challenges = _as_dictionary_array(data.get("active_challenges", []))
+	_sanitize_challenges()
 	device_levels = (data.get("device_levels", device_levels) as Dictionary).duplicate(true)
 	device_owned = (data.get("device_owned", device_owned) as Dictionary).duplicate(true)
 	personnel_levels = (data.get("personnel_levels", personnel_levels) as Dictionary).duplicate(true)
@@ -1168,12 +1393,17 @@ func load_progress() -> bool:
 		int(ManagementPhase.MICROSCOPE_ACTIVE)
 	)
 	_sanitize_progression_state()
+	_clear_unspawned_in_progress_samples()
+	_sync_energy_max(false)
+	_apply_offline_energy_recharge()
 	layer_changed.emit(game_layer)
 	management_phase_changed.emit(management_phase)
 	economy_changed.emit()
 	sample_queue_changed.emit()
 	shipping_changed.emit()
-	escalation_queue_changed.emit()
+	energy_changed.emit()
+	challenges_changed.emit()
+	save_progress()
 	return true
 
 
@@ -1187,7 +1417,64 @@ func _as_dictionary_array(value: Variant) -> Array[Dictionary]:
 	return output
 
 
+func _sanitize_contract_offers() -> void:
+	var now := Time.get_ticks_msec()
+	var max_expiry := now + CONTRACT_OFFER_MAX_SECONDS * 1000
+	var sanitized: Array[Dictionary] = []
+	for offer in contract_offers:
+		var expires_at := int(offer.get("expires_at_msec", 0))
+		if expires_at <= now:
+			continue
+		if expires_at > max_expiry:
+			offer["expires_at_msec"] = now + randi_range(CONTRACT_OFFER_MIN_SECONDS, CONTRACT_OFFER_MAX_SECONDS) * 1000
+		if not offer.has("offer_id") or str(offer.get("offer_id", "")).is_empty():
+			offer["offer_id"] = "OFFER-%d-%03d" % [now, randi_range(1, 999)]
+		sanitized.append(offer)
+	contract_offers = sanitized
+
+
+func _sanitize_challenges() -> void:
+	var now := Time.get_ticks_msec()
+	var sanitized_offers: Array[Dictionary] = []
+	for offer in challenge_offers:
+		if int(offer.get("expires_at_msec", 0)) > now:
+			sanitized_offers.append(offer)
+	challenge_offers = sanitized_offers
+
+	var sanitized_active: Array[Dictionary] = []
+	for challenge in active_challenges:
+		var quantity := maxi(1, int(challenge.get("quantity", 1)))
+		challenge["quantity"] = quantity
+		challenge["progress"] = clampi(int(challenge.get("progress", 0)), 0, quantity)
+		if str(challenge.get("contract_id", "")).is_empty():
+			continue
+		sanitized_active.append(challenge)
+	active_challenges = sanitized_active
+
+
+func _apply_offline_energy_recharge() -> void:
+	var now := int(Time.get_unix_time_from_system())
+	if _last_energy_update_unix <= 0:
+		_last_energy_update_unix = now
+		return
+	if player_energy >= player_energy_max:
+		_last_energy_update_unix = now
+		return
+	var elapsed := maxi(now - _last_energy_update_unix, 0)
+	var gained := floori(float(elapsed) / ENERGY_RECHARGE_SECONDS)
+	_energy_recharge_accumulator = fmod(float(elapsed), ENERGY_RECHARGE_SECONDS)
+	if gained > 0:
+		player_energy = mini(player_energy + gained, player_energy_max)
+	_last_energy_update_unix = now
+
+
 func _sanitize_progression_state() -> void:
+	for key in device_levels.keys():
+		if not DEVICE_CATALOG.has(str(key)):
+			device_levels.erase(key)
+	for key in device_owned.keys():
+		if not DEVICE_CATALOG.has(str(key)):
+			device_owned.erase(key)
 	for key in DEVICE_CATALOG.keys():
 		if not device_levels.has(key):
 			device_levels[key] = 1
@@ -1204,4 +1491,10 @@ func _sanitize_progression_state() -> void:
 		if int(personnel_levels[key]) <= 0:
 			personnel_employed[key] = false
 	samples_in_lab = sample_queue.size()
-	alert_count = escalation_tickets.size()
+
+
+func _clear_unspawned_in_progress_samples() -> void:
+	if sample_queue.is_empty():
+		return
+	sample_queue.clear()
+	samples_in_lab = 0

@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://labroom001"]
+[gd_scene load_steps=21 format=3 uid="uid://labroom001"]
 
 [ext_resource type="Script" path="res://scripts/laboratory/LaboratoryRoom.gd" id="1_lab"]
 [ext_resource type="Script" path="res://scripts/laboratory/DragController.gd" id="2_drag"]
@@ -18,6 +18,8 @@
 [ext_resource type="Texture2D" path="res://assets/cleanlab/CleanLab_microscope.png" id="16_microscope"]
 [ext_resource type="Texture2D" path="res://assets/cleanlab/CleanLab_entryroomdoor.png" id="17_entrydoor"]
 [ext_resource type="Texture2D" path="res://assets/cleanlab/CleanLab_machineroomdoor.png" id="18_machinedoor"]
+[ext_resource type="Texture2D" path="res://assets/cleanlab/CleanLab_HumanExtraction.png" id="19_humanextraction"]
+[ext_resource type="Texture2D" path="res://assets/cleanlab/CleanLab_HumanMicroscope.png" id="20_humanmicroscope"]
 
 [node name="LaboratoryRoom" type="Node2D"]
 script = ExtResource("1_lab")
@@ -113,6 +115,24 @@ offset_right = 1508.0
 offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("16_microscope")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="HumanExtractionOverlay" type="TextureRect" parent="."]
+visible = false
+offset_right = 1508.0
+offset_bottom = 1043.0
+mouse_filter = 2
+texture = ExtResource("19_humanextraction")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="HumanMicroscopeOverlay" type="TextureRect" parent="."]
+visible = false
+offset_right = 1508.0
+offset_bottom = 1043.0
+mouse_filter = 2
+texture = ExtResource("20_humanmicroscope")
 expand_mode = 1
 stretch_mode = 0
 

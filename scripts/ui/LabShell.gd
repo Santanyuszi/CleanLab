@@ -25,6 +25,7 @@ const MOBILE_SIDE_MARGIN := 24.0
 const SHOP_CARD_SIZE := Vector2(250, 376)
 const SHOP_THUMBNAIL_PANEL_HEIGHT := 170.0
 const CONTRACT_POPUP_MAX_SIZE := Vector2(1180, 820)
+const CHALLENGE_POPUP_MAX_SIZE := Vector2(980, 720)
 const SHOP_POPUP_MAX_SIZE := Vector2(900, 820)
 const ACHIEVEMENT_POPUP_MAX_SIZE := Vector2(1320, 720)
 const MICROSCOPE_POPUP_MAX_SIZE := Vector2(920, 560)
@@ -62,6 +63,8 @@ var _contracts_status: Label = null
 var _active_contracts_list: VBoxContainer = null
 var _contracts_popup: PanelContainer = null
 var _contracts_sections: VBoxContainer = null
+var _challenges_popup: PanelContainer = null
+var _challenges_list: VBoxContainer = null
 var _shop_panel: PanelContainer = null
 var _shop_grid: GridContainer = null
 var _shop_rows: Dictionary = {}
@@ -87,6 +90,7 @@ var _sfx_muted: bool = false
 var _brand_title: Label = null
 var _contract_add_button: Button = null
 var _contract_add_tween: Tween = null
+var _refreshing_contracts: bool = false
 
 
 func _ready() -> void:
@@ -105,14 +109,18 @@ func _ready() -> void:
 	_add_achievement_button()
 	_add_audio_buttons()
 	_add_contract_picker_popup()
+	_add_challenges_popup()
 	_add_device_shop_panel()
 	_add_achievements_panel()
 	GameManager.economy_changed.connect(_refresh_header)
 	GameManager.economy_changed.connect(_refresh_contracts)
 	GameManager.economy_changed.connect(_refresh_shop)
+	GameManager.energy_changed.connect(_refresh_header)
 	GameManager.sample_queue_changed.connect(_refresh_header)
 	GameManager.sample_queue_changed.connect(_refresh_contracts)
 	GameManager.contract_offers_changed.connect(_refresh_contracts)
+	GameManager.challenges_changed.connect(_refresh_challenges)
+	GameManager.challenge_completed.connect(_on_challenge_completed)
 	GameManager.device_changed.connect(_on_device_changed)
 	GameManager.personnel_changed.connect(_on_personnel_changed)
 	GameManager.device_changed.connect(func(_key: String) -> void: _refresh_shipping())
@@ -125,6 +133,7 @@ func _ready() -> void:
 	AchievementManager.unread_changed.connect(_on_achievement_unread_changed)
 	_refresh_header()
 	_refresh_contracts()
+	_refresh_challenges()
 	_refresh_shipping()
 	_refresh_shop()
 	_refresh_achievements()
@@ -262,6 +271,7 @@ func _add_main_menu() -> void:
 
 	vbox.add_child(_build_menu_action("LAB", "building-factory", _on_menu_lab_pressed))
 	vbox.add_child(_build_menu_action("CONTRACTS", "clipboard-list", _on_menu_contracts_pressed))
+	vbox.add_child(_build_menu_action("CHALLENGES", "target-arrow", _on_menu_challenges_pressed))
 	vbox.add_child(_build_menu_action("REPORTS", "report-analytics", _on_menu_reports_pressed))
 	vbox.add_child(_build_menu_action("SHOP", "shopping-cart", _on_menu_shop_pressed))
 	vbox.add_child(_build_menu_action("ACHIEVEMENTS", "award", _on_menu_achievements_pressed))
@@ -322,6 +332,11 @@ func _on_menu_contracts_pressed() -> void:
 	_close_main_menu()
 	if _contracts_popup != null and not _contracts_popup.visible:
 		_toggle_contract_picker()
+
+
+func _on_menu_challenges_pressed() -> void:
+	_close_main_menu()
+	_toggle_challenges()
 
 
 func _on_menu_reports_pressed() -> void:
@@ -565,8 +580,11 @@ func _process(delta: float) -> void:
 		return
 	_offer_refresh_accumulator = 0.0
 	GameManager.refresh_contract_offers(false)
+	GameManager.refresh_challenge_offers(false)
 	if _contracts_popup != null and _contracts_popup.visible:
 		_refresh_contracts()
+	if _challenges_popup != null and _challenges_popup.visible:
+		_refresh_challenges()
 	_update_contract_add_highlight()
 
 
@@ -583,6 +601,7 @@ func _layout_mobile_shell() -> void:
 	_layout_header()
 	_layout_main_menu()
 	_layout_popup(_contracts_popup, CONTRACT_POPUP_MAX_SIZE)
+	_layout_popup(_challenges_popup, CHALLENGE_POPUP_MAX_SIZE)
 	_layout_popup(_shop_panel, SHOP_POPUP_MAX_SIZE)
 	_layout_achievements_popup()
 	_layout_microscope_popup()
@@ -704,7 +723,12 @@ func _layout_microscope_popup() -> void:
 
 	var particle_field := _microscope_dock.get_node_or_null("Margin/VBox/ParticleField") as Control
 	if particle_field:
-		particle_field.custom_minimum_size = Vector2(0, maxf(target_size.y - 286.0, 150.0))
+		particle_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		particle_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		particle_field.custom_minimum_size = Vector2(0, maxf(target_size.y - 142.0, 260.0))
+	var prompt := _microscope_dock.get_node_or_null("Margin/VBox/PromptLabel") as Label
+	if prompt:
+		prompt.custom_minimum_size = Vector2(0, 34)
 
 
 func _contract_grid_columns() -> int:
@@ -1027,6 +1051,58 @@ func _add_contract_picker_popup() -> void:
 	scroll.add_child(_contracts_sections)
 	_style_buttons(_contracts_popup)
 	_layout_popup(_contracts_popup, CONTRACT_POPUP_MAX_SIZE)
+
+
+func _add_challenges_popup() -> void:
+	if _challenges_popup != null:
+		return
+	_challenges_popup = PanelContainer.new()
+	_challenges_popup.name = "ChallengesPopup"
+	_challenges_popup.visible = false
+	_challenges_popup.z_index = 36
+	_apply_panel_style(_challenges_popup, Color(OFF_WHITE, 0.98), PANEL_BORDER, 12, 1)
+	add_child(_challenges_popup)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_bottom", 18)
+	_challenges_popup.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	margin.add_child(vbox)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	vbox.add_child(header)
+
+	var title := Label.new()
+	title.text = "CHALLENGES"
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_color_override("font_color", TEXT_DARK)
+	header.add_child(title)
+
+	var close := Button.new()
+	close.text = "CLOSE"
+	close.icon = _tabler_texture("x")
+	close.custom_minimum_size = Vector2(104, TOUCH_TARGET)
+	close.pressed.connect(_toggle_challenges)
+	header.add_child(close)
+
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+
+	_challenges_list = VBoxContainer.new()
+	_challenges_list.add_theme_constant_override("separation", 12)
+	_challenges_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_challenges_list)
+	_style_buttons(_challenges_popup)
+	_layout_popup(_challenges_popup, CHALLENGE_POPUP_MAX_SIZE)
 
 
 func _add_device_shop_panel() -> void:
@@ -1370,10 +1446,156 @@ func _toggle_contract_picker() -> void:
 	_update_contract_add_highlight()
 
 
+func _toggle_challenges() -> void:
+	if _challenges_popup == null:
+		return
+	_challenges_popup.visible = not _challenges_popup.visible
+	if _challenges_popup.visible:
+		_layout_popup(_challenges_popup, CHALLENGE_POPUP_MAX_SIZE)
+	_refresh_challenges()
+
+
+func _refresh_challenges() -> void:
+	GameManager.refresh_challenge_offers(false)
+	if _challenges_list == null:
+		return
+	for child in _challenges_list.get_children():
+		child.queue_free()
+
+	var active := GameManager.get_active_challenges()
+	if not active.is_empty():
+		_challenges_list.add_child(_build_challenge_section_label("ACTIVE CHALLENGES"))
+		for challenge in active:
+			_challenges_list.add_child(_build_challenge_card(challenge, false))
+
+	var offers: Array[Dictionary] = []
+	for offer in GameManager.get_challenge_offers():
+		if GameManager.get_challenge_seconds_left(offer) > 0:
+			offers.append(offer)
+	_challenges_list.add_child(_build_challenge_section_label("TIMED OFFERS"))
+	if offers.is_empty():
+		var empty := Label.new()
+		empty.text = "No challenge offers right now. New ones arrive shortly."
+		empty.add_theme_color_override("font_color", TEXT_DIM)
+		_challenges_list.add_child(empty)
+	else:
+		for offer in offers:
+			_challenges_list.add_child(_build_challenge_card(offer, true))
+	_style_buttons(_challenges_list)
+
+
+func _build_challenge_section_label(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.custom_minimum_size = Vector2(0, 30)
+	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_color_override("font_color", MID_TEAL)
+	return label
+
+
+func _build_challenge_card(challenge: Dictionary, is_offer: bool) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(0, 148)
+	_apply_panel_style(card, Color(WHITE, 0.96), PANEL_BORDER, 8, 1)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	card.add_child(margin)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	margin.add_child(row)
+
+	var thumb_panel := PanelContainer.new()
+	thumb_panel.custom_minimum_size = Vector2(116, 116)
+	_apply_panel_style(thumb_panel, Color(OFF_WHITE, 0.72), Color(SOFT_TEAL, 0.58), 8, 1)
+	row.add_child(thumb_panel)
+
+	var thumbnail := TextureRect.new()
+	thumbnail.custom_minimum_size = Vector2(112, 112)
+	thumbnail.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	thumbnail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var path := str(challenge.get("thumbnail", ""))
+	if not path.is_empty():
+		thumbnail.texture = load(path)
+	thumb_panel.add_child(thumbnail)
+
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy.add_theme_constant_override("separation", 5)
+	row.add_child(copy)
+
+	var title := Label.new()
+	title.text = "%s x%d" % [str(challenge.get("part_name", "Part")), int(challenge.get("quantity", 1))]
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", TEXT_DARK)
+	copy.add_child(title)
+
+	var progress := int(challenge.get("progress", 0))
+	var quantity := int(challenge.get("quantity", 1))
+	var meta := Label.new()
+	meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	meta.add_theme_font_size_override("font_size", 13)
+	meta.add_theme_color_override("font_color", TEXT_DIM)
+	meta.text = "Progress %d/%d\nReward: $%s  +%d XP  +%d energy" % [
+		progress,
+		quantity,
+		_format_money(int(challenge.get("reward_money", 0))),
+		int(challenge.get("reward_xp", 0)),
+		int(challenge.get("reward_energy", 0)),
+	]
+	copy.add_child(meta)
+
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(124, TOUCH_TARGET)
+	if is_offer:
+		var seconds_left := GameManager.get_challenge_seconds_left(challenge)
+		button.text = "ACCEPT\n%ds" % seconds_left
+		button.disabled = seconds_left <= 0
+		button.pressed.connect(_on_challenge_offer_pressed.bind(challenge))
+	else:
+		button.text = "ACTIVE"
+		button.disabled = true
+	row.add_child(button)
+	return card
+
+
+func _on_challenge_offer_pressed(challenge: Dictionary) -> void:
+	var accepted := GameManager.accept_challenge_offer(str(challenge.get("challenge_id", "")))
+	if accepted.is_empty():
+		set_hint("That challenge offer expired.")
+	else:
+		set_hint("Challenge accepted: manufacture %d %s." % [
+			int(accepted.get("quantity", 1)),
+			str(accepted.get("part_name", "parts")),
+		])
+	if _challenges_popup:
+		_challenges_popup.visible = false
+	_refresh_challenges()
+
+
+func _on_challenge_completed(challenge: Dictionary) -> void:
+	set_hint("Challenge complete: +$%s, +%d XP, +%d energy." % [
+		_format_money(int(challenge.get("reward_money", 0))),
+		int(challenge.get("reward_xp", 0)),
+		int(challenge.get("reward_energy", 0)),
+	])
+	if _challenges_popup and _challenges_popup.visible:
+		_refresh_challenges()
+
+
 func _refresh_contracts() -> void:
+	if _refreshing_contracts:
+		return
+	_refreshing_contracts = true
+	GameManager.refresh_contract_offers(false)
 	var tier := GameManager.get_contract_tier()
 	if _contracts_status:
-		_contracts_status.text = "Tier %d market\nManufacturing buffer: %d / %d\nReputation: %.0f%%" % [
+		_contracts_status.text = "Tier %d market\nEntry buffer: %d / %d\nReputation: %.0f%%" % [
 			tier,
 			GameManager.samples_in_lab,
 			GameManager.get_manufacturing_buffer_capacity(),
@@ -1381,16 +1603,21 @@ func _refresh_contracts() -> void:
 		]
 	_refresh_active_contracts()
 	if _contracts_sections == null:
+		_refreshing_contracts = false
 		return
 	for child in _contracts_sections.get_children():
 		child.queue_free()
-	var catalog := GameManager.get_contract_offers()
+	var catalog: Array[Dictionary] = []
+	for offer in GameManager.get_contract_offers():
+		if GameManager.get_offer_seconds_left(offer) > 0:
+			catalog.append(offer)
 	if catalog.is_empty():
 		var empty := Label.new()
 		empty.text = "No active offers. New offers will arrive shortly."
 		empty.add_theme_color_override("font_color", TEXT_DIM)
 		_contracts_sections.add_child(empty)
 		_update_contract_add_highlight()
+		_refreshing_contracts = false
 		return
 	catalog.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		var tier_a := int(a.get("tier", 1))
@@ -1412,6 +1639,7 @@ func _refresh_contracts() -> void:
 		grid.add_child(_build_contract_card(contract))
 	_refresh_contract_grid_columns()
 	_style_buttons(_contracts_sections)
+	_refreshing_contracts = false
 
 
 func _refresh_active_contracts() -> void:
@@ -1543,11 +1771,13 @@ func _build_contract_card(contract: Dictionary) -> PanelContainer:
 	var batch_size := int(contract.get("batch_size", 1))
 	var seconds_left := GameManager.get_offer_seconds_left(contract)
 	var economics := Label.new()
-	economics.text = "Batch %d   Sell $%s   Cost $%s\nMargin $%s   Reputation %.0f%%   %ds left" % [
+	var margin_per_part := int(contract.get("margin", sell - cost))
+	economics.text = "Batch %d   Sell $%s   Cost $%s\nMargin $%s/part   Total $%s   Rep %.0f%%   %ds left" % [
 		batch_size,
 		_format_money(sell),
 		_format_money(cost),
-		_format_money(int(contract.get("margin", sell - cost))),
+		_format_money(margin_per_part),
+		_format_money(margin_per_part * batch_size),
 		float(contract.get("satisfaction_required", 0.0)),
 		seconds_left,
 	]
@@ -1556,32 +1786,53 @@ func _build_contract_card(contract: Dictionary) -> PanelContainer:
 	vbox.add_child(economics)
 
 	var button := Button.new()
-	button.text = "ACCEPT"
+	var disabled_reason := _contract_disabled_reason(cost, batch_size, seconds_left)
+	button.text = "EXPIRED" if seconds_left <= 0 else "ACCEPT"
+	if not disabled_reason.is_empty() and seconds_left > 0:
+		button.tooltip_text = disabled_reason
 	button.custom_minimum_size = Vector2(0, TOUCH_TARGET)
-	button.disabled = GameManager.player_money < cost * batch_size or GameManager.get_manufacturing_free_slots() < batch_size or seconds_left <= 0
+	button.disabled = seconds_left <= 0
 	button.pressed.connect(_on_contract_selected.bind(contract))
 	vbox.add_child(button)
 	return card
+
+
+func _contract_disabled_reason(cost: int, batch_size: int, seconds_left: int) -> String:
+	if seconds_left <= 0:
+		return "EXPIRED"
+	if GameManager.get_manufacturing_free_slots() < batch_size:
+		return "BUFFER FULL"
+	if GameManager.player_money < cost * batch_size:
+		return "NEED $%s" % _format_money(cost * batch_size)
+	return ""
 
 
 func _on_contract_selected(contract: Dictionary) -> void:
 	var cost := int(contract.get("manufacture_cost", 0))
 	var batch_size := int(contract.get("batch_size", 1))
 	if GameManager.get_manufacturing_free_slots() < batch_size:
-		set_hint("Manufacturing buffer is full.")
+		set_hint("Entry buffer is full.")
 		return
-	var accepted_offer := GameManager.accept_contract_offer(str(contract.get("offer_id", "")))
-	if accepted_offer.is_empty():
-		set_hint("That offer expired.")
-		return
-	if not GameManager.pay_manufacture_cost(cost * batch_size):
+	if GameManager.player_money < cost * batch_size:
 		set_hint("Not enough money for manufacturing cost.")
 		GameManager.refresh_contract_offers(true)
+		return
+	var accepted_offer := GameManager.try_accept_contract_offer(str(contract.get("offer_id", "")))
+	if accepted_offer.is_empty():
+		set_hint("That offer expired, was already taken, or cannot fit right now.")
+		GameManager.refresh_contract_offers(true)
+		_refresh_contracts()
 		return
 	var lab := get_lab_root()
 	var spawned := 0
 	if lab and lab.has_method("spawn_contract_batch"):
 		spawned = int(lab.spawn_contract_batch(accepted_offer))
+	if spawned <= 0:
+		GameManager.refund_contract_acceptance(accepted_offer)
+		set_hint("Could not place the samples in the lab. Try again.")
+		GameManager.refresh_contract_offers(true)
+		_refresh_contracts()
+		return
 	if spawned > 0:
 		GameManager.record_contract_accepted(accepted_offer)
 	set_hint("%s accepted. %d batch queued. Manufacturing cost: $%s." % [

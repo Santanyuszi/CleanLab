@@ -1,6 +1,6 @@
 class_name ManagementLayer
 extends Node
-## Calm strategic layer: intake, automated prep, escalations (future). Feeds microscopy.
+## Calm strategic layer: intake and automated prep. Feeds microscopy.
 
 @export var sample_scene: PackedScene
 @export var spawn_delay: float = 0.5
@@ -18,7 +18,6 @@ func _ready() -> void:
 	_pipeline.setup(_wash, _dry, _microscope)
 	_pipeline.pipeline_started.connect(_on_pipeline_started)
 	GameManager.microscopy_results_applied.connect(_on_microscopy_results_applied)
-	GameManager.escalation_queue_changed.connect(_on_escalation_queue_changed)
 	GameManager.start_prototype_run()
 	await get_tree().create_timer(spawn_delay).timeout
 	_spawn_incoming_sample()
@@ -48,10 +47,3 @@ func _on_pipeline_started(_sample: Sample) -> void:
 func _on_microscopy_results_applied(_summary: Dictionary) -> void:
 	await get_tree().create_timer(1.2).timeout
 	_spawn_incoming_sample()
-
-
-func _on_escalation_queue_changed() -> void:
-	var ticket := GameManager.get_next_escalation_ticket()
-	if ticket.is_empty():
-		return
-	_hud.set_phase_hint("Escalation: %s (resolve from panel)." % str(ticket.get("title", "Investigation required")))
