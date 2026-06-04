@@ -2,8 +2,6 @@ class_name MicroscopeDock
 extends PanelContainer
 ## Bottom-center microscopy panel — visible only during inspection (not on main lab idle).
 
-@export var particle_scene: PackedScene
-
 const TOKEN_SCRIPT := preload("res://scripts/minigames/SortParticleToken.gd")
 const CLASS_REGULAR := 0
 const CLASS_METALLIC_SHINY := 1
@@ -50,6 +48,7 @@ const BUTTON_TEXT := Color("#002121")
 @onready var _title: Label = get_node_or_null("Margin/VBox/Title") as Label
 
 var _active: bool = false
+var _finishing: bool = false
 var _time_left: float = 0.0
 var _score_val: int = 0
 var _correct: int = 0
@@ -135,7 +134,8 @@ func _button_style(bg: Color, border: Color) -> StyleBoxFlat:
 func set_active(on: bool) -> void:
 	if not on:
 		_active = false
-		_clear_particle()
+		if not _finishing:
+			_clear_particle()
 
 
 func _on_session_started(part: Part) -> void:
@@ -272,7 +272,16 @@ func _on_class_pressed(class_id: int) -> void:
 
 func _finish() -> void:
 	_active = false
-	var accuracy: float = 1.0 if _wrong == 0 else 0.0
+	_finishing = true
+	var passed := _wrong == 0
+	var microscope: WorkStation = null
+	for node in get_tree().get_nodes_in_group("work_station"):
+		var s: WorkStation = node as WorkStation
+		if s and s.station_kind == WorkStation.Kind.MICROSCOPE:
+			microscope = s
+	if microscope:
+		microscope.resume_after_inspection(passed)
+	var accuracy: float = 1.0 if passed else 0.0
 	var summary: Dictionary = {
 		"score": _score_val,
 		"accuracy": accuracy,
@@ -282,14 +291,8 @@ func _finish() -> void:
 		"class_counts": _class_counts_for_particle(),
 	}
 	GameManager.apply_microscopy_results(summary)
-	var microscope: WorkStation = null
-	for node in get_tree().get_nodes_in_group("work_station"):
-		var s: WorkStation = node as WorkStation
-		if s and s.station_kind == WorkStation.Kind.MICROSCOPE:
-				microscope = s
-	if microscope:
-		microscope.resume_after_inspection(_wrong == 0)
 	await get_tree().create_timer(0.85).timeout
+	_finishing = false
 	_clear_particle()
 
 

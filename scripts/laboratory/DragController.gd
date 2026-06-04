@@ -121,7 +121,7 @@ func _next_station_for(part: Part) -> WorkStation:
 		return null
 	for node in get_tree().get_nodes_in_group("work_station"):
 		var station := node as WorkStation
-		if station and station.station_kind == target_kind:
+		if station and int(station.station_kind) == target_kind:
 			return station
 	return null
 

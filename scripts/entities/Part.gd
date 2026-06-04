@@ -31,11 +31,12 @@ func _ready() -> void:
 	if order == null:
 		order = PartOrder.new()
 		order.display_name = "Sample"
-		order.required_steps = [
-			WorkStation.Kind.EXTRACTION,
-			WorkStation.Kind.DRYING,
-			WorkStation.Kind.MICROSCOPE,
+		var steps: Array[int] = [
+			int(WorkStation.Kind.EXTRACTION),
+			int(WorkStation.Kind.DRYING),
+			int(WorkStation.Kind.MICROSCOPE),
 		]
+		order.required_steps = steps
 	_label.text = order.display_name if order.display_name != "" else order.order_id
 	_report_badge.visible = false
 	_apply_thumbnail()
@@ -103,6 +104,7 @@ func set_report_ready() -> void:
 
 func reset_to_incoming() -> void:
 	current_step = Step.INCOMING
+	step_index = 0
 	is_on_station = false
 	_report_badge.visible = false
 	_refresh_visual()

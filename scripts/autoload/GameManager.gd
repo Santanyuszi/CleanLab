@@ -358,7 +358,6 @@ signal energy_changed
 signal challenges_changed
 signal challenge_completed(challenge: Dictionary)
 signal station_completed(device_key: String)
-signal microscope_minigame_requested(sample: Node)
 
 
 func _ready() -> void:
@@ -459,22 +458,6 @@ func notify_station_processing_complete(station_type: String) -> void:
 	if station_type == "microscope":
 		set_management_phase(ManagementPhase.MICROSCOPE_ACTIVE)
 
-
-func request_microscope_minigame(sample: Node) -> void:
-	if sample == null:
-		return
-	set_management_phase(ManagementPhase.MICROSCOPE_ACTIVE)
-	var connections := get_signal_connection_list("microscope_minigame_requested")
-	if connections.is_empty():
-		apply_microscopy_results({
-			"score": 90,
-			"accuracy": 0.78,
-			"avg_speed": 1.7,
-			"wrong": 0,
-			"classified": 1,
-		})
-		return
-	microscope_minigame_requested.emit(sample)
 
 
 func spend_energy(amount: int = 1) -> bool:
@@ -776,17 +759,25 @@ func get_offer_seconds_left(offer: Dictionary) -> int:
 	return maxi(ceili(float(remaining) / 1000.0), 0)
 
 
+func _market_price_multiplier() -> float:
+	## 0.5 at level 1 → 1.0 at level 8 → 1.5 at level 15+
+	return clampf(lerpf(0.5, 1.5, float(player_level - 1) / 14.0), 0.5, 1.5)
+
+
 func _build_contract_offer(contract: Dictionary) -> Dictionary:
 	var offer := contract.duplicate(true)
 	var tier := int(offer.get("tier", 1))
-	var cost := int(offer.get("manufacture_cost", 0))
+	var price_mult := _market_price_multiplier()
+	var base_cost := int(offer.get("manufacture_cost", 0))
+	var cost := maxi(5, roundi(float(base_cost) * price_mult))
 	var batch_size := _roll_offer_batch_size(tier)
-	var margin := _roll_offer_margin(tier, batch_size)
+	var margin := maxi(10, roundi(float(_roll_offer_margin(tier, batch_size)) * price_mult))
 	if tier == 1:
 		var safe_requirement := maxf(CONTRACT_BREAK_SATISFACTION, lab_reputation - 2.0)
 		offer["satisfaction_required"] = minf(float(offer.get("satisfaction_required", 35.0)), safe_requirement)
 	offer["offer_id"] = "OFFER-%d-%03d" % [Time.get_ticks_msec(), randi_range(1, 999)]
 	offer["batch_size"] = batch_size
+	offer["manufacture_cost"] = cost
 	offer["margin"] = margin
 	offer["sell_price"] = cost + margin
 	offer["expires_at_msec"] = Time.get_ticks_msec() + randi_range(CONTRACT_OFFER_MIN_SECONDS, CONTRACT_OFFER_MAX_SECONDS) * 1000
@@ -1010,16 +1001,19 @@ func apply_manufacturing_halt_penalty() -> void:
 func create_order_from_contract(contract: Dictionary) -> PartOrder:
 	var order := PartOrder.new()
 	order.order_id = "CTR-%03d" % randi_range(1, 999)
-	order.part_name = str(contract.get("name", "Contract Part"))
+	order.display_name = str(contract.get("name", "Contract Part"))
 	order.contract_id = str(contract.get("id", "contract_part"))
 	order.thumbnail_path = str(contract.get("thumbnail", ""))
 	order.tier = int(contract.get("tier", 1))
 	order.payout = int(contract.get("sell_price", 120))
 	order.manufacture_cost = int(contract.get("manufacture_cost", 40))
 	order.satisfaction_required = float(contract.get("satisfaction_required", 50.0))
-	order.min_extraction_level = clampi(order.tier - 1, 1, MAX_DEVICE_LEVEL)
-	order.min_drying_level = 1
-	order.min_microscope_level = clampi(order.tier, 1, MAX_DEVICE_LEVEL)
+	var steps: Array[int] = [
+		int(WorkStation.Kind.EXTRACTION),
+		int(WorkStation.Kind.DRYING),
+		int(WorkStation.Kind.MICROSCOPE),
+	]
+	order.required_steps = steps
 	return order
 
 
@@ -1029,9 +1023,25 @@ func pay_manufacture_cost(amount: int) -> bool:
 	if player_money < amount:
 		return false
 	player_money -= amount
+	_guard_minimum_money()
 	economy_changed.emit()
 	save_progress()
 	return true
+
+
+func _min_affordable_contract_cost() -> int:
+	var min_base := 9999
+	for contract in CONTRACT_CATALOG:
+		if int(contract.get("tier", 99)) <= get_contract_tier():
+			min_base = mini(min_base, int(contract.get("manufacture_cost", 9999)))
+	var scaled := maxi(5, roundi(float(min_base) * _market_price_multiplier()))
+	return maxi(scaled, 5)
+
+
+func _guard_minimum_money() -> void:
+	var floor_cost := _min_affordable_contract_cost()
+	if player_money < floor_cost:
+		player_money = floor_cost
 
 
 func get_device_purchase_cost(device_key: String) -> int:
@@ -1178,7 +1188,7 @@ func stage_part_for_shipping(part: Part) -> bool:
 		return false
 	staged_reports.append({
 		"name": part.order.order_id,
-		"part_name": part.order.part_name,
+		"part_name": part.order.display_name,
 		"contract_id": part.order.contract_id,
 		"thumbnail": part.order.thumbnail_path,
 		"payout": part.order.payout,

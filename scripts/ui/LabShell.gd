@@ -271,10 +271,8 @@ func _add_main_menu() -> void:
 	vbox.add_theme_constant_override("separation", 10)
 	margin.add_child(vbox)
 
-	vbox.add_child(_build_menu_action("LAB", "building-factory", _on_menu_lab_pressed))
-	vbox.add_child(_build_menu_action("CONTRACTS", "clipboard-list", _on_menu_contracts_pressed))
+	vbox.add_child(_build_menu_action("CONTRACTS", "report-analytics", _on_menu_contracts_pressed))
 	vbox.add_child(_build_menu_action("CHALLENGES", "target-arrow", _on_menu_challenges_pressed))
-	vbox.add_child(_build_menu_action("REPORTS", "report-analytics", _on_menu_reports_pressed))
 	vbox.add_child(_build_menu_action("SHOP", "shopping-cart", _on_menu_shop_pressed))
 	vbox.add_child(_build_menu_action("ACHIEVEMENTS", "award", _on_menu_achievements_pressed))
 	vbox.add_child(_build_menu_action("MUSIC", "music", _on_menu_music_pressed))
@@ -738,9 +736,9 @@ func _contract_grid_columns() -> int:
 	if _contracts_popup == null:
 		return 2
 	var available_width := _contracts_popup.size.x - 72.0
-	if available_width >= 1040.0:
+	if available_width >= 700.0:
 		return 3
-	if available_width >= 650.0:
+	if available_width >= 440.0:
 		return 2
 	return 1
 
@@ -1717,8 +1715,8 @@ func _build_contract_section(tier: int) -> VBoxContainer:
 	var grid := GridContainer.new()
 	grid.name = "Cards"
 	grid.columns = _contract_grid_columns()
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
 	section.add_child(grid)
 	return section
 
@@ -1734,46 +1732,46 @@ func _build_contract_section_label(tier: int) -> Label:
 
 func _build_contract_card(contract: Dictionary) -> PanelContainer:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(300, 300)
+	card.custom_minimum_size = Vector2(200, 0)
 	_apply_panel_style(card, Color(WHITE, 0.96), PANEL_BORDER, 8, 1)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_bottom", 10)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 8)
 	card.add_child(margin)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 7)
+	vbox.add_theme_constant_override("separation", 5)
 	margin.add_child(vbox)
 
 	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 8)
+	header.add_theme_constant_override("separation", 6)
 	vbox.add_child(header)
 
 	var name := Label.new()
 	name.text = str(contract.get("name", "Contract"))
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name.add_theme_font_size_override("font_size", 14)
+	name.add_theme_font_size_override("font_size", 13)
 	name.add_theme_color_override("font_color", TEXT_DARK)
 	header.add_child(name)
 
 	var tier := int(contract.get("tier", 1))
 	var tier_label := Label.new()
 	tier_label.text = "T%d" % tier
-	tier_label.add_theme_font_size_override("font_size", 13)
+	tier_label.add_theme_font_size_override("font_size", 12)
 	tier_label.add_theme_color_override("font_color", _tier_color(tier))
 	header.add_child(tier_label)
 
 	var thumbnail_panel := PanelContainer.new()
-	thumbnail_panel.custom_minimum_size = Vector2(0, 128)
+	thumbnail_panel.custom_minimum_size = Vector2(0, 76)
 	thumbnail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_panel_style(thumbnail_panel, Color(OFF_WHITE, 0.68), Color(SOFT_TEAL, 0.58), 8, 1)
 	vbox.add_child(thumbnail_panel)
 
 	var thumbnail := TextureRect.new()
-	thumbnail.custom_minimum_size = Vector2(0, 128)
+	thumbnail.custom_minimum_size = Vector2(0, 76)
 	thumbnail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	thumbnail.expand_mode = TextureRect.EXPAND_FIT_HEIGHT_PROPORTIONAL
 	thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -1783,40 +1781,38 @@ func _build_contract_card(contract: Dictionary) -> PanelContainer:
 		thumbnail.texture = load(thumbnail_path)
 	thumbnail_panel.add_child(thumbnail)
 
-	var description := Label.new()
-	description.text = str(contract.get("description", ""))
-	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	description.custom_minimum_size = Vector2(0, 40)
-	description.add_theme_font_size_override("font_size", 13)
-	description.add_theme_color_override("font_color", TEXT_DIM)
-	vbox.add_child(description)
-
 	var sell := int(contract.get("sell_price", 0))
 	var cost := int(contract.get("manufacture_cost", 0))
 	var batch_size := int(contract.get("batch_size", 1))
 	var seconds_left := GameManager.get_offer_seconds_left(contract)
-	var economics := Label.new()
 	var margin_per_part := int(contract.get("margin", sell - cost))
-	economics.text = "Batch %d   Sell $%s   Cost $%s\nMargin $%s/part   Total $%s   Rep %.0f%%   %ds left" % [
+	var economics := Label.new()
+	economics.text = "Batch %d · $%s sell · $%s cost · %ds" % [
 		batch_size,
 		_format_money(sell),
 		_format_money(cost),
+		seconds_left,
+	]
+	economics.add_theme_font_size_override("font_size", 11)
+	economics.add_theme_color_override("font_color", MID_TEAL)
+	vbox.add_child(economics)
+
+	var margin_label := Label.new()
+	margin_label.text = "$%s/part · $%s total · Rep %.0f%%" % [
 		_format_money(margin_per_part),
 		_format_money(margin_per_part * batch_size),
 		float(contract.get("satisfaction_required", 0.0)),
-		seconds_left,
 	]
-	economics.add_theme_font_size_override("font_size", 13)
-	economics.add_theme_color_override("font_color", MID_TEAL)
-	vbox.add_child(economics)
+	margin_label.add_theme_font_size_override("font_size", 11)
+	margin_label.add_theme_color_override("font_color", TEXT_DIM)
+	vbox.add_child(margin_label)
 
 	var button := Button.new()
 	var disabled_reason := _contract_disabled_reason(cost, batch_size, seconds_left)
 	button.text = "EXPIRED" if seconds_left <= 0 else "ACCEPT"
 	if not disabled_reason.is_empty() and seconds_left > 0:
 		button.tooltip_text = disabled_reason
-	button.custom_minimum_size = Vector2(0, TOUCH_TARGET)
+	button.custom_minimum_size = Vector2(0, 40)
 	button.disabled = seconds_left <= 0
 	button.pressed.connect(_on_contract_selected.bind(contract))
 	vbox.add_child(button)
@@ -1836,6 +1832,7 @@ func _contract_disabled_reason(cost: int, batch_size: int, seconds_left: int) ->
 func _on_contract_selected(contract: Dictionary) -> void:
 	var cost := int(contract.get("manufacture_cost", 0))
 	var batch_size := int(contract.get("batch_size", 1))
+	var offer_id := str(contract.get("offer_id", ""))
 	if GameManager.get_manufacturing_free_slots() < batch_size:
 		set_hint("Entry buffer is full.")
 		return
@@ -1843,7 +1840,7 @@ func _on_contract_selected(contract: Dictionary) -> void:
 		set_hint("Not enough money for manufacturing cost.")
 		GameManager.refresh_contract_offers(true)
 		return
-	var accepted_offer := GameManager.try_accept_contract_offer(str(contract.get("offer_id", "")))
+	var accepted_offer := GameManager.try_accept_contract_offer(offer_id)
 	if accepted_offer.is_empty():
 		set_hint("That offer expired, was already taken, or cannot fit right now.")
 		GameManager.refresh_contract_offers(true)

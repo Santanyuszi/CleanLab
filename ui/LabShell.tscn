@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://labshell001"]
+[gd_scene load_steps=9 format=3 uid="uid://labshell001"]
 
 [ext_resource type="Script" path="res://scripts/ui/LabShell.gd" id="1_shell"]
 [ext_resource type="Script" path="res://scripts/ui/HeaderBar.gd" id="2_header"]
@@ -7,7 +7,6 @@
 [ext_resource type="Script" path="res://scripts/ui/SampleQueuePanel.gd" id="5_queue"]
 [ext_resource type="Script" path="res://scripts/ui/MicroscopeDock.gd" id="6_micro"]
 [ext_resource type="PackedScene" uid="uid://labroom001" path="res://scenes/laboratory/LaboratoryRoom.tscn" id="8_lab"]
-[ext_resource type="PackedScene" uid="uid://particlespot001" path="res://scenes/minigames/ParticleSpot.tscn" id="9_spot"]
 [ext_resource type="PackedScene" uid="uid://problempopup001" path="res://minigames/ProblemInspectionPopup.tscn" id="10_popup"]
 
 [node name="LabShell" type="Control"]
@@ -306,7 +305,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 2.2
 script = ExtResource("6_micro")
-particle_scene = ExtResource("9_spot")
 
 [node name="Margin" type="MarginContainer" parent="VBox/BottomRow/MicroscopeDock"]
 layout_mode = 2
