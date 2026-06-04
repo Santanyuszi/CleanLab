@@ -171,7 +171,7 @@ static func _kind_to_station_name(kind: int) -> String:
 
 func _apply_thumbnail() -> void:
 	_thumbnail.visible = false
-	if order.thumbnail_path.is_empty() or not FileAccess.file_exists(order.thumbnail_path):
+	if order.thumbnail_path.is_empty() or not ResourceLoader.exists(order.thumbnail_path):
 		return
 	var texture := load(order.thumbnail_path) as Texture2D
 	if texture == null:

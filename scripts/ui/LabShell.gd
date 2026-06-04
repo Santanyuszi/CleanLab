@@ -29,6 +29,9 @@ const CHALLENGE_POPUP_MAX_SIZE := Vector2(980, 720)
 const SHOP_POPUP_MAX_SIZE := Vector2(900, 820)
 const ACHIEVEMENT_POPUP_MAX_SIZE := Vector2(1320, 720)
 const MICROSCOPE_POPUP_MAX_SIZE := Vector2(920, 560)
+const STATUS_BAR_MOBILE_HEIGHT := 78.0
+const STATUS_FONT_SIZE_COMPACT := 15
+const STATUS_FONT_SIZE_REGULAR := 17
 const ACHIEVEMENT_BADGE_ATLAS_PATH := "res://assets/achievements/Achievements.png"
 const ACHIEVEMENT_COMPOSED_BADGE_PATH := "res://assets/achievements/composed_badges/%s/%s_%s.png"
 const TABLER_ICON_PATH := "res://assets/icons/tabler/%s.svg"
@@ -246,11 +249,8 @@ func _add_main_menu() -> void:
 	_menu_button.pressed.connect(_toggle_main_menu)
 	_style_icon_button(_menu_button)
 	_set_button_tabler_icon(_menu_button, "menu-2")
-	var header_row := get_node_or_null("VBox/HeaderBar/Margin/HBox") as HBoxContainer
-	if header_row:
-		header_row.add_child(_menu_button)
-	else:
-		add_child(_menu_button)
+	_menu_button.z_index = 60
+	add_child(_menu_button)
 
 	_menu_panel = PanelContainer.new()
 	_menu_panel.name = "MainMenuPanel"
@@ -448,7 +448,7 @@ func _update_button_tabler_icon(button: Button, icon_name: String, muted: bool =
 
 func _tabler_texture(icon_name: String) -> Texture2D:
 	var path := TABLER_ICON_PATH % icon_name
-	if not FileAccess.file_exists(path):
+	if not ResourceLoader.exists(path):
 		return null
 	return load(path) as Texture2D
 
@@ -613,23 +613,52 @@ func _layout_mobile_shell() -> void:
 
 func _layout_header() -> void:
 	var width := size.x
+	var header_bar := get_node_or_null("VBox/HeaderBar") as PanelContainer
+	if header_bar:
+		header_bar.custom_minimum_size = Vector2(0, 68)
 	var header_margin := get_node_or_null("VBox/HeaderBar/Margin") as MarginContainer
 	if header_margin:
 		header_margin.add_theme_constant_override("margin_left", 12)
-		header_margin.add_theme_constant_override("margin_right", 12)
+		header_margin.add_theme_constant_override("margin_right", TOUCH_TARGET + 24)
 	var header_row := get_node_or_null("VBox/HeaderBar/Margin/HBox") as HBoxContainer
 	if header_row:
 		header_row.add_theme_constant_override("separation", 5 if width < 1500.0 else 6)
+	var status_bar := get_node_or_null("VBox/StatusBar") as PanelContainer
+	if status_bar:
+		status_bar.custom_minimum_size = Vector2(0, STATUS_BAR_MOBILE_HEIGHT)
 	var status_margin := get_node_or_null("VBox/StatusBar/Margin") as MarginContainer
 	if status_margin:
 		status_margin.add_theme_constant_override("margin_left", 12)
 		status_margin.add_theme_constant_override("margin_right", 12)
+		status_margin.add_theme_constant_override("margin_top", 8)
+		status_margin.add_theme_constant_override("margin_bottom", 8)
 	var status_row := get_node_or_null("VBox/StatusBar/Margin/HBox") as HBoxContainer
 	if status_row:
-		status_row.add_theme_constant_override("separation", 4 if width < 1500.0 else 6)
+		status_row.add_theme_constant_override("separation", 8 if width < 1500.0 else 14)
+		_apply_status_label_sizing(status_row, width)
 	if _brand_title:
-		_brand_title.add_theme_font_size_override("font_size", 28 if width < 1500.0 else 32)
+		_brand_title.add_theme_font_size_override("font_size", 26 if width < 1500.0 else 32)
 		_brand_title.size = Vector2(150, 56)
+		_brand_title.z_index = 58
+	if _menu_button:
+		_menu_button.visible = true
+		_menu_button.size = Vector2(TOUCH_TARGET, TOUCH_TARGET)
+		_menu_button.position = Vector2(
+			maxf(8.0, size.x - TOUCH_TARGET - 12.0),
+			6.0
+		)
+
+
+func _apply_status_label_sizing(status_row: HBoxContainer, width: float) -> void:
+	var font_size := STATUS_FONT_SIZE_COMPACT if width < 1500.0 else STATUS_FONT_SIZE_REGULAR
+	var min_width := 118.0 if width < 1500.0 else 146.0
+	for child in status_row.get_children():
+		if child is Label:
+			var label := child as Label
+			label.add_theme_font_size_override("font_size", font_size)
+			label.custom_minimum_size = Vector2(min_width, 0)
+			label.autowrap_mode = TextServer.AUTOWRAP_OFF
+			label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 
 func _layout_popup(panel: PanelContainer, max_size: Vector2) -> void:
@@ -1392,10 +1421,10 @@ func _achievement_badge_texture(achievement: Dictionary) -> Texture2D:
 	var tier_key := _achievement_tier_key(int(achievement.get("tier", AchievementManager.Tier.LOCKED)))
 	var id := str(achievement.get("id", ""))
 	var path := ACHIEVEMENT_COMPOSED_BADGE_PATH % [tier_key, id, tier_key]
-	if FileAccess.file_exists(path):
-		var image := Image.new()
-		if image.load(ProjectSettings.globalize_path(path)) == OK:
-			return ImageTexture.create_from_image(image)
+	if ResourceLoader.exists(path):
+		var texture := load(path) as Texture2D
+		if texture:
+			return texture
 	return _achievement_badge_frame(int(achievement.get("tier", AchievementManager.Tier.LOCKED)))
 
 
@@ -1414,7 +1443,7 @@ func _achievement_tier_key(tier: int) -> String:
 
 
 func _achievement_badge_frame(tier: int) -> Texture2D:
-	if not FileAccess.file_exists(ACHIEVEMENT_BADGE_ATLAS_PATH):
+	if not ResourceLoader.exists(ACHIEVEMENT_BADGE_ATLAS_PATH):
 		return null
 	var atlas := AtlasTexture.new()
 	atlas.atlas = load(ACHIEVEMENT_BADGE_ATLAS_PATH)
@@ -2092,7 +2121,10 @@ func _build_truck_button() -> TextureButton:
 
 
 func _make_alpha_click_mask(path: String) -> BitMap:
-	var image := Image.load_from_file(path)
+	var texture := _texture_from_png(path)
+	if texture == null:
+		return null
+	var image := texture.get_image()
 	if image == null:
 		return null
 	var mask := BitMap.new()
@@ -2156,6 +2188,7 @@ func _style_buttons(root: Node) -> void:
 			var button := child as Button
 			button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, TOUCH_TARGET)
 			button.focus_mode = Control.FOCUS_NONE
+			button.add_theme_font_size_override("font_size", 16)
 			button.add_theme_stylebox_override("normal", _button_style(Color(WHITE, 0.96), PANEL_BORDER))
 			button.add_theme_stylebox_override("hover", _button_style(OFF_WHITE, MINT_ACCENT))
 			button.add_theme_stylebox_override("pressed", _button_style(Color(MINT_ACCENT, 0.72), MINT_ACCENT))

@@ -15,6 +15,8 @@ config/description="Technical cleanliness laboratory simulation"
 config/version="1.1.0"
 run/main_scene="res://scenes/main/IntroSplash.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
+boot_splash/bg_color=Color(0.94902, 0.976471, 0.972549, 1)
+boot_splash/show_image=false
 config/icon="res://assets/app_icon/cleanlab_app_icon_512.png"
 
 [autoload]
@@ -32,6 +34,8 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/size/viewport_width.mobile=1280
+window/size/viewport_height.mobile=720
 
 [input]
 
@@ -51,4 +55,5 @@ tap={
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true

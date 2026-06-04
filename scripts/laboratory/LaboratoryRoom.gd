@@ -338,10 +338,7 @@ func _texture_from_png(path: String) -> Texture2D:
 		var imported_texture := load(path) as Texture2D
 		if imported_texture:
 			return imported_texture
-	var image := Image.load_from_file(path)
-	if image == null:
-		return null
-	return ImageTexture.create_from_image(image)
+	return null
 
 
 func _image_from_png(path: String) -> Image:
@@ -351,7 +348,7 @@ func _image_from_png(path: String) -> Image:
 		var imported_texture := load(path) as Texture2D
 		if imported_texture:
 			return imported_texture.get_image()
-	return Image.load_from_file(path)
+	return null
 
 
 func _format_money(amount: int) -> String:
