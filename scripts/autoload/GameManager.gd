@@ -15,10 +15,11 @@ enum ManagementPhase {
 
 const MINIGAME_PROBLEM_CHANCE: float = 0.0
 const SAVE_PATH := "user://cleanlab_save_v1.json"
+const STARTING_MONEY := 18
 
 var game_layer: GameLayer = GameLayer.LAB
 var management_phase: ManagementPhase = ManagementPhase.WAITING_FOR_INCOMING
-var player_money: int = 220
+var player_money: int = STARTING_MONEY
 var player_xp: int = 0
 var player_xp_to_next: int = 140
 var player_level: int = 1
@@ -393,10 +394,10 @@ func start_run(force_reset: bool = false) -> void:
 	challenge_offers.clear()
 	active_challenges.clear()
 	samples_in_lab = 0
-	player_money = 220
 	player_xp = 0
 	player_xp_to_next = _xp_required_for_next_level(1)
 	player_level = 1
+	player_money = _min_affordable_contract_cost()
 	player_energy_max = _energy_max_for_level(player_level)
 	player_energy = player_energy_max
 	_last_energy_update_unix = int(Time.get_unix_time_from_system())
@@ -1413,7 +1414,7 @@ func load_progress() -> bool:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
 	var data: Dictionary = parsed
-	player_money = int(data.get("player_money", 220))
+	player_money = int(data.get("player_money", STARTING_MONEY))
 	player_xp = max(0, int(data.get("player_xp", 0)))
 	player_xp_to_next = max(1, int(data.get("player_xp_to_next", _xp_required_for_next_level(1))))
 	player_level = max(1, int(data.get("player_level", 1)))

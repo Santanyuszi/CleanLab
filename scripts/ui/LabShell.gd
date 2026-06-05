@@ -54,7 +54,6 @@ const SHOP_PERSONNEL_IMAGES := {
 }
 
 @onready var _header: HeaderBar = %StatusBar
-@onready var _sidebar: StationSidebar = %StationSidebar
 @onready var _sample_queue: SampleQueuePanel = get_node_or_null("VBox/BottomRow/SampleQueuePanel") as SampleQueuePanel
 @onready var _microscope_dock: MicroscopeDock = %MicroscopeDock
 @onready var _lab_viewport: SubViewport = %LabViewport
@@ -102,7 +101,6 @@ func _ready() -> void:
 	add_to_group("lab_shell")
 	_remove_sample_queue_panel()
 	_bottom_row.visible = false
-	_remove_right_panel_from_layout()
 	resized.connect(_layout_mobile_shell)
 	_apply_reference_skin()
 	_promote_microscope_dock_to_popup()
@@ -928,15 +926,6 @@ func _remove_sample_queue_panel() -> void:
 		_sample_queue.get_parent().remove_child(_sample_queue)
 	_sample_queue.queue_free()
 	_sample_queue = null
-
-
-func _remove_right_panel_from_layout() -> void:
-	var middle_row := get_node_or_null("VBox/MiddleRow") as HBoxContainer
-	if middle_row == null or _sidebar == null or _sidebar.get_parent() != middle_row:
-		return
-	middle_row.remove_child(_sidebar)
-	_sidebar.queue_free()
-	_sidebar = null
 
 
 func _promote_microscope_dock_to_popup() -> void:
