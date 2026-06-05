@@ -35,8 +35,8 @@ var staged_reports: Array[Dictionary] = []
 var contract_offers: Array[Dictionary] = []
 var challenge_offers: Array[Dictionary] = []
 var active_challenges: Array[Dictionary] = []
-var _energy_recharge_accumulator: float = 0.0
 var _last_energy_update_unix: int = 0
+var _energy_recharge_timer: Timer = null
 
 const MAX_DEVICE_LEVEL := 10
 const BASE_ENERGY_MAX := 30
@@ -362,15 +362,21 @@ signal station_completed(device_key: String)
 
 func _ready() -> void:
 	randomize()
+	_start_energy_timer()
 
 
-func _process(delta: float) -> void:
-	_energy_recharge_accumulator += delta
-	if _energy_recharge_accumulator < ENERGY_RECHARGE_SECONDS:
-		return
-	var gained := floori(_energy_recharge_accumulator / ENERGY_RECHARGE_SECONDS)
-	_energy_recharge_accumulator = fmod(_energy_recharge_accumulator, ENERGY_RECHARGE_SECONDS)
-	restore_energy(gained)
+func _start_energy_timer() -> void:
+	_energy_recharge_timer = Timer.new()
+	_energy_recharge_timer.name = "EnergyRechargeTimer"
+	_energy_recharge_timer.wait_time = ENERGY_RECHARGE_SECONDS
+	_energy_recharge_timer.one_shot = false
+	_energy_recharge_timer.timeout.connect(_on_energy_recharge_tick)
+	add_child(_energy_recharge_timer)
+	_energy_recharge_timer.start()
+
+
+func _on_energy_recharge_tick() -> void:
+	restore_energy(1)
 	_last_energy_update_unix = int(Time.get_unix_time_from_system())
 
 
@@ -684,7 +690,6 @@ func refresh_contract_offers(force: bool = false) -> void:
 		changed = true
 	if changed:
 		contract_offers_changed.emit()
-		save_progress()
 
 
 func get_contract_offers() -> Array[Dictionary]:
@@ -865,7 +870,6 @@ func refresh_challenge_offers(force: bool = false) -> void:
 		changed = true
 	if changed:
 		challenges_changed.emit()
-		save_progress()
 
 
 func get_challenge_offers() -> Array[Dictionary]:
