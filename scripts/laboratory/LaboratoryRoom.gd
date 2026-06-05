@@ -62,12 +62,12 @@ var _button_tweens: Dictionary = {}
 var _button_states: Dictionary = {}
 var _personnel_tweens: Dictionary = {}
 var _personnel_energy_blocked: bool = false
-var _automation_tick: float = 0.0
-var _auto_contract_tick: float = 0.0
-var _auto_truck_tick: float = 0.0
 var _truck_overlay_button: TextureButton = null
 var _truck_count_label: Label = null
 var _truck_overlay_tween: Tween = null
+var _automation_timer: Timer = null
+var _auto_contract_timer: Timer = null
+var _auto_truck_timer: Timer = null
 
 
 func _ready() -> void:
@@ -83,22 +83,25 @@ func _ready() -> void:
 	GameManager.shipping_changed.connect(_refresh_truck_overlay_button)
 	GameManager.start_run()
 	_refresh_personnel_overlays()
-
-
-func _process(delta: float) -> void:
 	_fit_art_to_viewport()
-	_automation_tick += delta
-	_auto_contract_tick += delta
-	_auto_truck_tick += delta
-	if _automation_tick >= 0.35:
-		_automation_tick = 0.0
-		_run_personnel_routing()
-	if _auto_contract_tick >= 3.0:
-		_auto_contract_tick = 0.0
-		_try_auto_accept_contract()
-	if _auto_truck_tick >= 2.0:
-		_auto_truck_tick = 0.0
-		_try_auto_send_truck()
+	get_viewport().size_changed.connect(_fit_art_to_viewport)
+	_start_automation_timers()
+
+
+func _start_automation_timers() -> void:
+	_automation_timer = _make_lab_timer(0.35, _run_personnel_routing)
+	_auto_contract_timer = _make_lab_timer(3.0, _try_auto_accept_contract)
+	_auto_truck_timer = _make_lab_timer(2.0, _try_auto_send_truck)
+
+
+func _make_lab_timer(wait: float, callback: Callable) -> Timer:
+	var t := Timer.new()
+	t.wait_time = wait
+	t.one_shot = false
+	t.timeout.connect(callback)
+	add_child(t)
+	t.start()
+	return t
 
 
 func _fit_art_to_viewport() -> void:

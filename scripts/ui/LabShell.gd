@@ -72,7 +72,6 @@ var _challenges_list: VBoxContainer = null
 var _shop_panel: PanelContainer = null
 var _shop_grid: GridContainer = null
 var _shop_rows: Dictionary = {}
-var _offer_refresh_accumulator: float = 0.0
 var _music_player: AudioStreamPlayer = null
 var _sfx_player: AudioStreamPlayer = null
 var _claim_sfx_player: AudioStreamPlayer = null
@@ -96,6 +95,7 @@ var _contract_add_button: Button = null
 var _contract_add_tween: Tween = null
 var _refreshing_contracts: bool = false
 var _last_hint: String = ""
+var _offer_refresh_timer: Timer = null
 
 
 func _ready() -> void:
@@ -146,6 +146,42 @@ func _ready() -> void:
 	_on_layer_changed(GameManager.game_layer)
 	set_hint("Open Menu > Contracts to accept your first job.")
 	call_deferred("_layout_mobile_shell")
+	_start_offer_refresh_timer()
+	call_deferred("_setup_lab_viewport_resize")
+
+
+func _start_offer_refresh_timer() -> void:
+	_offer_refresh_timer = Timer.new()
+	_offer_refresh_timer.name = "OfferRefreshTimer"
+	_offer_refresh_timer.wait_time = 1.0
+	_offer_refresh_timer.one_shot = false
+	_offer_refresh_timer.timeout.connect(_on_offer_refresh_tick)
+	add_child(_offer_refresh_timer)
+	_offer_refresh_timer.start()
+
+
+func _on_offer_refresh_tick() -> void:
+	GameManager.refresh_contract_offers(false)
+	GameManager.refresh_challenge_offers(false)
+	_update_contract_add_highlight()
+
+
+func _setup_lab_viewport_resize() -> void:
+	var svc := get_node_or_null("VBox/MiddleRow/LabViewportContainer/SubViewportContainer") as SubViewportContainer
+	if svc == null:
+		return
+	svc.resized.connect(_on_lab_viewport_container_resized)
+	_on_lab_viewport_container_resized()
+
+
+func _on_lab_viewport_container_resized() -> void:
+	var svc := get_node_or_null("VBox/MiddleRow/LabViewportContainer/SubViewportContainer") as SubViewportContainer
+	var vp := get_node_or_null("VBox/MiddleRow/LabViewportContainer/SubViewportContainer/LabViewport") as SubViewport
+	if svc == null or vp == null:
+		return
+	var new_size := Vector2i(int(svc.size.x), int(svc.size.y))
+	if new_size.x > 4 and new_size.y > 4 and vp.size != new_size:
+		vp.size = new_size
 
 
 func _add_music_loop() -> void:
@@ -572,20 +608,6 @@ func play_claim_sfx() -> void:
 		return
 	_claim_sfx_player.stop()
 	_claim_sfx_player.play()
-
-
-func _process(delta: float) -> void:
-	_offer_refresh_accumulator += delta
-	if _offer_refresh_accumulator < 1.0:
-		return
-	_offer_refresh_accumulator = 0.0
-	GameManager.refresh_contract_offers(false)
-	GameManager.refresh_challenge_offers(false)
-	if _contracts_popup != null and _contracts_popup.visible:
-		_refresh_contracts()
-	if _challenges_popup != null and _challenges_popup.visible:
-		_refresh_challenges()
-	_update_contract_add_highlight()
 
 
 func get_lab_root() -> Node2D:

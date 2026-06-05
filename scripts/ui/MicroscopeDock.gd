@@ -23,6 +23,9 @@ const PARTICLE_SHEETS := {
 		"res://assets/minigames/microscope/shiny_fiber.png",
 	],
 }
+
+static var _preloaded_textures: Dictionary = {}
+static var _filter_texture_preloaded: Texture2D = null
 const CLASS_NAMES := {
 	CLASS_REGULAR: "REGULAR",
 	CLASS_METALLIC_SHINY: "METALLIC SHINY",
@@ -80,6 +83,7 @@ func _ready() -> void:
 	_accuracy.visible = false
 	_prompt.text = "Select the particle category."
 	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_preload_particle_assets()
 
 
 func _hide_old_class_buttons() -> void:
@@ -184,7 +188,10 @@ func _add_filter_texture(size: Vector2) -> void:
 		_filter_texture.queue_free()
 	_filter_texture = TextureRect.new()
 	_filter_texture.name = "RevisionFilter"
-	_filter_texture.texture = load(FILTER_IMAGE_PATH) as Texture2D
+	if _filter_texture_preloaded != null:
+		_filter_texture.texture = _filter_texture_preloaded
+	else:
+		_filter_texture.texture = load(FILTER_IMAGE_PATH) as Texture2D
 	_filter_texture.size = _filter_display_size(size)
 	_filter_texture.position = size * 0.5 - _filter_texture.size * 0.5
 	_filter_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -197,7 +204,10 @@ func _particle_asset_for_class(class_id: int) -> Dictionary:
 	var paths: Array = PARTICLE_SHEETS.get(class_id, [])
 	if paths.is_empty():
 		return {}
-	var texture := load(str(paths.pick_random())) as Texture2D
+	var path := str(paths.pick_random())
+	var texture: Texture2D = _preloaded_textures.get(path) as Texture2D
+	if texture == null:
+		texture = load(path) as Texture2D
 	if texture == null:
 		return {}
 	var tex_size := texture.get_size()
@@ -210,6 +220,17 @@ func _particle_asset_for_class(class_id: int) -> Dictionary:
 	return {
 		"texture": atlas,
 	}
+
+
+func _preload_particle_assets() -> void:
+	if _filter_texture_preloaded == null and ResourceLoader.exists(FILTER_IMAGE_PATH):
+		_filter_texture_preloaded = load(FILTER_IMAGE_PATH) as Texture2D
+	for paths: Array in PARTICLE_SHEETS.values():
+		for path: String in paths:
+			if not _preloaded_textures.has(path) and ResourceLoader.exists(path):
+				var tex := load(path) as Texture2D
+				if tex:
+					_preloaded_textures[path] = tex
 
 
 func _layout_revision_controls() -> void:

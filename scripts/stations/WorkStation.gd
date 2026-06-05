@@ -57,6 +57,7 @@ func _ready() -> void:
 	else:
 		_set_status("Tap to start")
 	_emit_status()
+	set_process(false)
 
 
 func get_slot_global_position() -> Vector2:
@@ -120,6 +121,7 @@ func try_accept_part(part: Part) -> bool:
 	_emit_status()
 	if held_part:
 		GameManager.update_queue_for_part(held_part, station_title)
+	set_process(true)
 	return true
 
 
@@ -224,6 +226,7 @@ func _process(delta: float) -> void:
 			processing.append(part)
 	if processing.is_empty():
 		_refresh_aggregate_state()
+		set_process(false)
 		return
 	for part in processing:
 		var id := part.order.order_id
