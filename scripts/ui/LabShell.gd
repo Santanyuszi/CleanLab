@@ -102,7 +102,7 @@ func _ready() -> void:
 	add_to_group("lab_shell")
 	_remove_sample_queue_panel()
 	_bottom_row.visible = false
-	call_deferred("_remove_right_panel_from_layout")
+	_remove_right_panel_from_layout()
 	resized.connect(_layout_mobile_shell)
 	_apply_reference_skin()
 	_promote_microscope_dock_to_popup()
@@ -282,6 +282,12 @@ func _add_main_menu() -> void:
 	_menu_button.name = "MainMenuButton"
 	_menu_button.tooltip_text = "Menu"
 	_menu_button.custom_minimum_size = Vector2(TOUCH_TARGET, TOUCH_TARGET)
+	_menu_button.anchor_left = 1.0
+	_menu_button.anchor_right = 1.0
+	_menu_button.offset_left = -TOUCH_TARGET - 12.0
+	_menu_button.offset_top = 6.0
+	_menu_button.offset_right = -12.0
+	_menu_button.offset_bottom = TOUCH_TARGET + 6.0
 	_menu_button.pressed.connect(_toggle_main_menu)
 	_style_icon_button(_menu_button)
 	_set_button_tabler_icon(_menu_button, "menu-2")
@@ -634,7 +640,8 @@ func _layout_mobile_shell() -> void:
 
 
 func _layout_header() -> void:
-	var width := size.x
+	var viewport_size := get_viewport_rect().size
+	var width := viewport_size.x if viewport_size.x > 0.0 else size.x
 	var header_bar := get_node_or_null("VBox/HeaderBar") as PanelContainer
 	if header_bar:
 		header_bar.custom_minimum_size = Vector2(0, 68)
@@ -664,11 +671,10 @@ func _layout_header() -> void:
 		_brand_title.z_index = 58
 	if _menu_button:
 		_menu_button.visible = true
-		_menu_button.size = Vector2(TOUCH_TARGET, TOUCH_TARGET)
-		_menu_button.position = Vector2(
-			maxf(8.0, size.x - TOUCH_TARGET - 12.0),
-			6.0
-		)
+		_menu_button.offset_left = -TOUCH_TARGET - 12.0
+		_menu_button.offset_top = 6.0
+		_menu_button.offset_right = -12.0
+		_menu_button.offset_bottom = TOUCH_TARGET + 6.0
 
 
 func _apply_status_label_sizing(status_row: HBoxContainer, width: float) -> void:
@@ -925,14 +931,12 @@ func _remove_sample_queue_panel() -> void:
 
 
 func _remove_right_panel_from_layout() -> void:
-	await get_tree().process_frame
-	await get_tree().process_frame
 	var middle_row := get_node_or_null("VBox/MiddleRow") as HBoxContainer
 	if middle_row == null or _sidebar == null or _sidebar.get_parent() != middle_row:
 		return
 	middle_row.remove_child(_sidebar)
-	_sidebar.visible = false
-	_sidebar.custom_minimum_size = Vector2.ZERO
+	_sidebar.queue_free()
+	_sidebar = null
 
 
 func _promote_microscope_dock_to_popup() -> void:
