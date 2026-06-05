@@ -13,6 +13,7 @@ extends Node
 ##    - tier_key values: "bronze", "silver", "gold", "certified"
 ##    - For incremental achievements set type to "Incremental" in Play Console
 ##      and match the threshold counts in AchievementManager.CATALOG.
+##    - You can roll out IDs gradually; empty entries are safely ignored.
 
 const GOOGLE_ACHIEVEMENT_IDS := {
 	# --- Sample Handler ---
@@ -118,7 +119,7 @@ func _ready() -> void:
 
 
 func is_available() -> bool:
-	return _play_games != null and _has_required_methods() and _has_configured_achievement_ids()
+	return _play_games != null and _has_required_methods()
 
 
 func sign_in() -> void:
@@ -152,7 +153,8 @@ func show_achievements_ui() -> void:
 
 
 func _external_achievement_id(local_id: String, tier_key: String) -> String:
-	return str(GOOGLE_ACHIEVEMENT_IDS.get("%s.%s" % [local_id, tier_key], ""))
+	var external_id := str(GOOGLE_ACHIEVEMENT_IDS.get("%s.%s" % [local_id, tier_key], ""))
+	return external_id.strip_edges()
 
 
 func _has_required_methods() -> bool:
@@ -163,9 +165,3 @@ func _has_required_methods() -> bool:
 		and _play_games.has_method("show_achievements")
 	)
 
-
-func _has_configured_achievement_ids() -> bool:
-	for external_id in GOOGLE_ACHIEVEMENT_IDS.values():
-		if str(external_id).strip_edges().is_empty():
-			return false
-	return true
