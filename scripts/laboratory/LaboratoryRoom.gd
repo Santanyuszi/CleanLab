@@ -258,6 +258,7 @@ func _add_truck_overlay_button() -> void:
 	button.texture_disabled = texture
 	button.ignore_texture_size = true
 	button.stretch_mode = TextureButton.STRETCH_SCALE
+	button.visible = false
 	button.texture_click_mask = _make_alpha_click_mask(TRUCK_BUTTON_PATH)
 	button.pressed.connect(_on_truck_overlay_pressed)
 	_truck_overlay_button = button
@@ -284,6 +285,7 @@ func _refresh_truck_overlay_button() -> void:
 	var capacity := GameManager.get_truck_capacity()
 	var has_parts := staged_count > 0
 	if _truck_overlay_button:
+		_truck_overlay_button.visible = has_parts
 		_truck_overlay_button.disabled = not has_parts
 		_refresh_truck_overlay_pulse(has_parts)
 	if _truck_count_label:
